@@ -20,26 +20,26 @@ final class AlarmManager {
         notifications.requestAuthorization()
     }
 
-    func start(snapshot: AlarmSnapshot, volume: Double, hapticsEnabled: Bool, notificationsEnabled: Bool) {
+    func start(snapshot: AlarmSnapshot, volume: Double, hapticsEnabled: Bool, notificationsEnabled: Bool, tone: AlarmTone) {
         guard !isAlarming else {
-            resumePlayback(volume: volume, hapticsEnabled: hapticsEnabled)
+            resumePlayback(volume: volume, hapticsEnabled: hapticsEnabled, tone: tone)
             return
         }
         isAlarming = true
         activeID = snapshot.id
         configure(volume: volume, hapticsEnabled: hapticsEnabled, notificationsEnabled: notificationsEnabled)
-        audio.startLooping()
+        audio.startLooping(tone: tone)
         haptics.startAlarmPattern()
         notifications.startRepeating(snapshot: snapshot)
     }
 
     /// Restarts alarm audio and haptics after the lock screen stalls them.
     /// Does not schedule another set of notifications.
-    func resumePlayback(volume: Double, hapticsEnabled: Bool) {
+    func resumePlayback(volume: Double, hapticsEnabled: Bool, tone: AlarmTone) {
         guard isAlarming else { return }
         audio.setVolume(volume)
         haptics.setEnabled(hapticsEnabled)
-        audio.startLooping()
+        audio.startLooping(tone: tone)
         haptics.startAlarmPattern()
     }
 

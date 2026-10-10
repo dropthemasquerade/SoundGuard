@@ -20,6 +20,7 @@ final class AppModel {
     var recordLevel: Float = 0
     var recordElapsed: TimeInterval = 0
     var previewingID: UUID?
+    var previewingTone: AlarmTone?
 
     private var recordTimer: Timer?
     private var recordStartedAt: Date?
@@ -89,7 +90,32 @@ final class AppModel {
     }
 
     func preview(_ sound: ReferenceSound) {
-        let url = references.fileURL(for: sound.fileName)
+        play(url: references.fileURL(for: sound.fileName), soundID: sound.id, tone: nil)
+    }
+
+    func playTrigger(id: UUID) {
+        guard TriggerClipStore.exists(id) else { return }
+        play(url: TriggerClipStore.url(for: id), soundID: id, tone: nil)
+    }
+
+    func previewAlarmTone(_ tone: AlarmTone) {
+        if previewingTone == tone {
+            stopPreview()
+            return
+        }
+        guard !coordinator.phase.isAlarmSurface else { return }
+        guard let url = tone.fileURL() else {
+            banner = "Could not prepare this alarm tone."
+            return
+        }
+        play(url: url, soundID: nil, tone: tone)
+    }
+
+    func stopPreview() {
+        references.stopPreview()
+    }
+
+    private func play(url: URL, soundID: UUID?, tone: AlarmTone?) {
         do {
             coordinator.beginPlaybackGuard()
             try coordinator.prepareForPreview()
@@ -98,19 +124,19 @@ final class AppModel {
                     self?.completePreview()
                 }
             }
-            previewingID = sound.id
+            previewingID = soundID
+            previewingTone = tone
         } catch {
             coordinator.cancelPlaybackGuard()
+            previewingID = nil
+            previewingTone = nil
             banner = AudioSessionController.message(for: error)
         }
     }
 
-    func stopPreview() {
-        references.stopPreview()
-    }
-
     private func completePreview() {
         previewingID = nil
+        previewingTone = nil
         coordinator.endPlaybackGuard()
     }
 
@@ -186,6 +212,8 @@ final class AppModel {
     }
 
     func clearHistory() {
+        stopPreview()
+        TriggerClipStore.deleteAll()
         try? events.clearEvents()
         refresh()
     }

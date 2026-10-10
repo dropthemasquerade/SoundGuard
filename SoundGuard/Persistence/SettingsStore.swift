@@ -34,6 +34,14 @@ final class SettingsStore {
     var windowEndMinutes: Int {
         didSet { defaults.set(windowEndMinutes, forKey: Keys.windowEnd) }
     }
+    var alarmToneRaw: String {
+        didSet { defaults.set(alarmToneRaw, forKey: Keys.alarmTone) }
+    }
+
+    var alarmTone: AlarmTone {
+        get { AlarmTone(rawValue: alarmToneRaw) ?? .classic }
+        set { alarmToneRaw = newValue.rawValue }
+    }
 
     var monitoringWindow: MonitoringWindow {
         MonitoringWindow(
@@ -56,6 +64,7 @@ final class SettingsStore {
         static let scheduleEnabled = "sg.scheduleEnabled"
         static let windowStart = "sg.windowStart"
         static let windowEnd = "sg.windowEnd"
+        static let alarmTone = "sg.alarmTone"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -70,6 +79,7 @@ final class SettingsStore {
         scheduleEnabled = defaults.object(forKey: Keys.scheduleEnabled) as? Bool ?? false
         windowStartMinutes = defaults.object(forKey: Keys.windowStart) as? Int ?? 8 * 60
         windowEndMinutes = defaults.object(forKey: Keys.windowEnd) as? Int ?? 22 * 60
+        alarmToneRaw = defaults.string(forKey: Keys.alarmTone) ?? AlarmTone.classic.rawValue
     }
 
     func apply(to parameters: inout DetectionParameters) {

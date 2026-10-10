@@ -38,6 +38,45 @@ struct SettingsView: View {
                             Slider(value: $settings.alarmVolume, in: 0.2...1.0)
                                 .tint(SGTheme.magenta)
                         }
+                        Text("ALARM TONE")
+                            .font(SGTheme.micro)
+                            .foregroundStyle(SGTheme.dim)
+                        ForEach(AlarmTone.allCases) { tone in
+                            Button {
+                                settings.alarmTone = tone
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(tone.title)
+                                            .font(SGTheme.micro)
+                                            .foregroundStyle(settings.alarmTone == tone ? SGTheme.cyan : SGTheme.text)
+                                        Text(tone.detail)
+                                            .font(SGTheme.micro)
+                                            .foregroundStyle(SGTheme.dim)
+                                    }
+                                    Spacer()
+                                    if settings.alarmTone == tone {
+                                        Text("ON")
+                                            .font(SGTheme.micro)
+                                            .foregroundStyle(SGTheme.bg)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(SGTheme.cyan, in: Capsule())
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Button(model.previewingTone == settings.alarmTone ? "STOP TONE" : "PREVIEW TONE") {
+                            model.previewAlarmTone(settings.alarmTone)
+                        }
+                        .font(SGTheme.micro)
+                        .foregroundStyle(SGTheme.magenta)
+                        .disabled(model.coordinator.phase.isAlarmSurface)
+                        Text("CLASSIC keeps the original loop. The other tones are generated on this phone.")
+                            .font(SGTheme.micro)
+                            .foregroundStyle(SGTheme.dim)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .tint(SGTheme.cyan)
 

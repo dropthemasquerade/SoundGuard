@@ -26,7 +26,7 @@ struct EventsView: View {
                         Text("NO ALARMS RECORDED")
                             .font(.system(size: 16, weight: .bold, design: .monospaced))
                             .foregroundStyle(SGTheme.cyan)
-                        Text("Detections stay listed with confidence, acknowledge time, and duration.")
+                        Text("Detections stay listed with the triggering sound, confidence, acknowledge time, and duration.")
                             .font(SGTheme.micro)
                             .foregroundStyle(SGTheme.dim)
                             .multilineTextAlignment(.center)
@@ -70,6 +70,21 @@ struct EventsView: View {
             }
             row("CONFIDENCE", String(format: "%.0f%%", event.confidence * 100))
             row("DURATION", String(format: "%.0fs", event.duration))
+            if TriggerClipStore.exists(event.id) {
+                Button(model.previewingID == event.id ? "STOP CLIP" : "PLAY CLIP") {
+                    if model.previewingID == event.id {
+                        model.stopPreview()
+                    } else {
+                        model.playTrigger(id: event.id)
+                    }
+                }
+                .font(SGTheme.micro)
+                .foregroundStyle(SGTheme.cyan)
+            } else {
+                Text("NO CLIP")
+                    .font(SGTheme.micro)
+                    .foregroundStyle(SGTheme.dim)
+            }
             ConfidenceBar(value: event.confidence)
         }
         .padding(14)

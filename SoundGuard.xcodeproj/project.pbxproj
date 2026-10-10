@@ -12,11 +12,13 @@
 		15F07C208C528FD59685EF22 /* SoundMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3360EBBECF5B9975A9F3D3A5 /* SoundMatcher.swift */; };
 		18396A357F64BD4ACA2348B6 /* MonitoringCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33B12157BC09E0B49C867699 /* MonitoringCoordinator.swift */; };
 		1A3BC078FF877751BAFEEDAC /* SoundMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37820C47C13D4F30FD816D18 /* SoundMatcherTests.swift */; };
+		1D073FD55ECAAA7A91ABFFF5 /* WaveFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EE50C88D9013D1324A0E59 /* WaveFile.swift */; };
 		1ECD388F786F0925EDF1D84A /* AudioCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F4F701235EF959540F054E1 /* AudioCaptureService.swift */; };
 		2CBACAE59A89DD14229CC26E /* DetectionEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B32A790CAEA5AF787E6A8AE2 /* DetectionEngineTests.swift */; };
 		2FDC96AF3782C804B2907F71 /* NeonControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A2C6D46167B90014D722DD /* NeonControls.swift */; };
 		315C584084709669812D7AD2 /* DetectionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E84D8735BBF8BB32F838E081 /* DetectionTypes.swift */; };
 		39FEEADC115AB6545CC77751 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD4714B9A310C02C07C3EAD /* NotificationService.swift */; };
+		3D262EABD71830C01F085B81 /* AlarmTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6464ACD6A0BCB83EB7056EB /* AlarmTone.swift */; };
 		41B4304911AF11D726D4B532 /* CyberpunkTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 729F1B59CBF7DC76ED411C1B /* CyberpunkTheme.swift */; };
 		463B5809C96F04711BB6D3B1 /* DetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCFF5857C2FDBDA2057E25EE /* DetectionEngine.swift */; };
 		4E05685038FC5C44932D2BB3 /* EventStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1149B6C8310AB2E2C54D1B30 /* EventStore.swift */; };
@@ -35,6 +37,7 @@
 		AE16B2B9C44CF7170F80DA69 /* AudioSessionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46120906A42CEE4C416A3CAB /* AudioSessionController.swift */; };
 		B23FB59DFAD37A4D34DCD6A6 /* AppStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DE3B0B04F2D313204F45A85 /* AppStateMachineTests.swift */; };
 		C1E33B3988963D54D264C7D1 /* AppPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03E87B2C6C55DF41176061C1 /* AppPhase.swift */; };
+		CFB8D8C88001CA2A2E2E5E49 /* AlarmToneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFD3D07A9FB5D9A14A29EC4 /* AlarmToneTests.swift */; };
 		D1200822DCD8CCB0C5808703 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9D1D23250E92BDF5211065 /* SettingsView.swift */; };
 		D1C9179F9A2697477220463F /* AlertAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8D77A8D75FB2B5B148BDCE /* AlertAudioService.swift */; };
 		DE551B245AF31FA75ED461E1 /* NotificationPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F404938EFBCE2A4690690F55 /* NotificationPresets.swift */; };
@@ -45,6 +48,7 @@
 		F8BEC6035647200EBA47655B /* SoundsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F8A809261673853A5C2CD21 /* SoundsView.swift */; };
 		F8DFD3F786606CDF6FEF368E /* StandbyAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3330EC231E5C807AC143694F /* StandbyAudioService.swift */; };
 		FB4D84B2D8DC323DA50AFA74 /* DSP.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ADBFC217B3BCECFF6332F7 /* DSP.swift */; };
+		FC025F93824ED8893DDF0169 /* TriggerClipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61662529E46C9C9BC24DA5B5 /* TriggerClipStore.swift */; };
 		FEEC23EBED0254A0BE39E29F /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803BA6BA2B3F2A07CBBA7A03 /* SettingsStore.swift */; };
 		FF4F1F358B424F2E88F7EAEF /* alarm_loop.wav in Resources */ = {isa = PBXBuildFile; fileRef = 8AF10417F2F7AF0AC163E504 /* alarm_loop.wav */; };
 /* End PBXBuildFile section */
@@ -76,6 +80,7 @@
 		4F8A809261673853A5C2CD21 /* SoundsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundsView.swift; sourceTree = "<group>"; };
 		50ADBFC217B3BCECFF6332F7 /* DSP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSP.swift; sourceTree = "<group>"; };
 		56DF7CBBE8B65924E6DB3696 /* HapticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsService.swift; sourceTree = "<group>"; };
+		61662529E46C9C9BC24DA5B5 /* TriggerClipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriggerClipStore.swift; sourceTree = "<group>"; };
 		68A2C6D46167B90014D722DD /* NeonControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeonControls.swift; sourceTree = "<group>"; };
 		6D821102862359225B77A467 /* AudioFeatureExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFeatureExtractor.swift; sourceTree = "<group>"; };
 		6EF361582137F78C4C24354D /* AppStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateMachine.swift; sourceTree = "<group>"; };
@@ -96,8 +101,11 @@
 		AF22D4D70780542586B53A08 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		B0CDA55633621B5259767DEF /* RecordSoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordSoundView.swift; sourceTree = "<group>"; };
 		B32A790CAEA5AF787E6A8AE2 /* DetectionEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionEngineTests.swift; sourceTree = "<group>"; };
+		BFFD3D07A9FB5D9A14A29EC4 /* AlarmToneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmToneTests.swift; sourceTree = "<group>"; };
+		C5EE50C88D9013D1324A0E59 /* WaveFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveFile.swift; sourceTree = "<group>"; };
 		D0C9F91431E42CCF654A658F /* AlarmManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmManager.swift; sourceTree = "<group>"; };
 		D3C816FB3EB8E745DA49CCA5 /* MonitoringWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitoringWindowTests.swift; sourceTree = "<group>"; };
+		D6464ACD6A0BCB83EB7056EB /* AlarmTone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmTone.swift; sourceTree = "<group>"; };
 		D670F72A0B05DBF20528D358 /* NotificationPresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPresetTests.swift; sourceTree = "<group>"; };
 		DCFF5857C2FDBDA2057E25EE /* DetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionEngine.swift; sourceTree = "<group>"; };
 		E84D8735BBF8BB32F838E081 /* DetectionTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionTypes.swift; sourceTree = "<group>"; };
@@ -180,6 +188,7 @@
 				99A03D1B2641F02354842D47 /* ReferenceAudioService.swift */,
 				3360EBBECF5B9975A9F3D3A5 /* SoundMatcher.swift */,
 				3330EC231E5C807AC143694F /* StandbyAudioService.swift */,
+				C5EE50C88D9013D1324A0E59 /* WaveFile.swift */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -219,6 +228,7 @@
 			isa = PBXGroup;
 			children = (
 				D0C9F91431E42CCF654A658F /* AlarmManager.swift */,
+				D6464ACD6A0BCB83EB7056EB /* AlarmTone.swift */,
 				2B8D77A8D75FB2B5B148BDCE /* AlertAudioService.swift */,
 				56DF7CBBE8B65924E6DB3696 /* HapticsService.swift */,
 				EFD4714B9A310C02C07C3EAD /* NotificationService.swift */,
@@ -237,6 +247,7 @@
 		8F31C73D90E2A9A9741F91EE /* SoundGuardTests */ = {
 			isa = PBXGroup;
 			children = (
+				BFFD3D07A9FB5D9A14A29EC4 /* AlarmToneTests.swift */,
 				9DE3B0B04F2D313204F45A85 /* AppStateMachineTests.swift */,
 				B32A790CAEA5AF787E6A8AE2 /* DetectionEngineTests.swift */,
 				D3C816FB3EB8E745DA49CCA5 /* MonitoringWindowTests.swift */,
@@ -287,6 +298,7 @@
 				1149B6C8310AB2E2C54D1B30 /* EventStore.swift */,
 				88A17EBA0A817F501445BCE5 /* PersistenceStack.swift */,
 				803BA6BA2B3F2A07CBBA7A03 /* SettingsStore.swift */,
+				61662529E46C9C9BC24DA5B5 /* TriggerClipStore.swift */,
 			);
 			path = Persistence;
 			sourceTree = "<group>";
@@ -401,6 +413,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CFB8D8C88001CA2A2E2E5E49 /* AlarmToneTests.swift in Sources */,
 				B23FB59DFAD37A4D34DCD6A6 /* AppStateMachineTests.swift in Sources */,
 				2CBACAE59A89DD14229CC26E /* DetectionEngineTests.swift in Sources */,
 				931F74CCE760BE62691A386B /* MonitoringWindowTests.swift in Sources */,
@@ -414,6 +427,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				84D282FA33BB35C0531CA661 /* AlarmManager.swift in Sources */,
+				3D262EABD71830C01F085B81 /* AlarmTone.swift in Sources */,
 				D1C9179F9A2697477220463F /* AlertAudioService.swift in Sources */,
 				E6DC1BB4EBEB62A960D43D4C /* HapticsService.swift in Sources */,
 				39FEEADC115AB6545CC77751 /* NotificationService.swift in Sources */,
@@ -427,6 +441,7 @@
 				6DFB94BAEF6BDC03FEA9B9CE /* ReferenceAudioService.swift in Sources */,
 				15F07C208C528FD59685EF22 /* SoundMatcher.swift in Sources */,
 				F8DFD3F786606CDF6FEF368E /* StandbyAudioService.swift in Sources */,
+				1D073FD55ECAAA7A91ABFFF5 /* WaveFile.swift in Sources */,
 				C1E33B3988963D54D264C7D1 /* AppPhase.swift in Sources */,
 				315C584084709669812D7AD2 /* DetectionTypes.swift in Sources */,
 				F5BD834A106FF3F3A70B8B04 /* MonitoringWindow.swift in Sources */,
@@ -435,6 +450,7 @@
 				4E05685038FC5C44932D2BB3 /* EventStore.swift in Sources */,
 				07DF9CB5DAB1C2B95BB7BBC8 /* PersistenceStack.swift in Sources */,
 				FEEC23EBED0254A0BE39E29F /* SettingsStore.swift in Sources */,
+				FC025F93824ED8893DDF0169 /* TriggerClipStore.swift in Sources */,
 				E733E6D08EDB6E594F938004 /* SoundGuardApp.swift in Sources */,
 				2FDC96AF3782C804B2907F71 /* NeonControls.swift in Sources */,
 				A9EACDA79195E83E59FD2B7F /* AlarmView.swift in Sources */,

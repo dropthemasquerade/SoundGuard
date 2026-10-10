@@ -35,7 +35,7 @@ final class MonitoringCoordinator {
         self.references = references
         let pipeline = matching
         capture.onSamples = { [weak self] samples, time in
-            pipeline.process(samples: samples, time: time) { result, level, confidence in
+            pipeline.process(samples: samples, time: time) { result, level, confidence, clip in
                 Task { @MainActor in
                     guard let coordinator = self else { return }
                     coordinator.liveLevel = level
@@ -45,7 +45,7 @@ final class MonitoringCoordinator {
                     }
                     coordinator.liveConfidence = confidence
                     if let result {
-                        coordinator.handleDetection(result)
+                        coordinator.handleDetection(result, clip: clip ?? [])
                     }
                 }
             }
@@ -181,7 +181,11 @@ final class MonitoringCoordinator {
         refreshSchedule()
         guard phase == .alarming else { return }
         try? session.configureForPlayback()
-        alarmManager.resumePlayback(volume: settings.alarmVolume, hapticsEnabled: settings.hapticsEnabled)
+        alarmManager.resumePlayback(
+            volume: settings.alarmVolume,
+            hapticsEnabled: settings.hapticsEnabled,
+            tone: settings.alarmTone
+        )
     }
 
     /// Starts or stops the microphone when the armed window opens or closes.
@@ -216,7 +220,7 @@ final class MonitoringCoordinator {
         }
     }
 
-    private func handleDetection(_ result: DetectionResult) {
+    private func handleDetection(_ result: DetectionResult, clip: [Float]) {
         let name = events.activeSound()?.name ?? "TARGET"
         let snapshot = AlarmSnapshot(
             id: UUID(),
@@ -225,6 +229,9 @@ final class MonitoringCoordinator {
             confidence: result.confidence
         )
         dispatch(.targetDetected(snapshot))
+        // Ignored detections (already alarming, or outside the window) must not leave a clip.
+        guard activeAlarm?.id == snapshot.id else { return }
+        TriggerClipStore.save(samples: clip, id: snapshot.id)
     }
 
     private func dispatch(_ event: AppEvent) {
@@ -272,7 +279,8 @@ final class MonitoringCoordinator {
                 snapshot: snapshot,
                 volume: settings.alarmVolume,
                 hapticsEnabled: settings.hapticsEnabled,
-                notificationsEnabled: settings.notificationsEnabled
+                notificationsEnabled: settings.notificationsEnabled,
+                tone: settings.alarmTone
             )
         case .stopAlarm:
             alarmManager.stop()
@@ -319,6 +327,7 @@ final class MonitoringCoordinator {
     private func beginCapture() throws {
         try session.configureForMonitoring()
         matching.resetSession()
+        matching.discardRecentAudio()
         reloadTarget()
         try capture.start()
         dispatch(.captureStarted)
@@ -393,6 +402,9 @@ final class MatchingPipeline: @unchecked Sendable {
     private let detection = DetectionEngine()
     private let queue = DispatchQueue(label: "soundguard.dsp", qos: .userInitiated)
     private var lastLevel: Float = 0
+    /// Last few seconds of microphone audio, copied only when a detection latches.
+    private var recent: [Float] = []
+    private let recentLimit = 16_000 * 5
 
     func load(template: ReferenceTemplate, threshold: Double, consecutiveHits: Int) {
         queue.sync {
@@ -430,13 +442,21 @@ final class MatchingPipeline: @unchecked Sendable {
         }
     }
 
-    /// Drop buffered audio and any consecutive hits. Queued ahead of `whenIdle`.
+    /// Drop buffered features and any consecutive hits. Queued ahead of `whenIdle`.
+    /// The recent-audio ring is left intact so a preview flush does not erase the trigger clip.
     func flushDetectionState() {
         queue.async { [self] in
             extractor.reset()
             matcher.resetBuffer()
             detection.resetLatch()
             detection.resetSession()
+        }
+    }
+
+    /// Forget audio from before this capture session so a clip starts at arm time.
+    func discardRecentAudio() {
+        queue.async { [self] in
+            recent.removeAll(keepingCapacity: true)
         }
     }
 
@@ -448,8 +468,12 @@ final class MatchingPipeline: @unchecked Sendable {
         }
     }
 
-    func process(samples: [Float], time: TimeInterval, completion: @escaping (DetectionResult?, Float, Float) -> Void) {
+    func process(samples: [Float], time: TimeInterval, completion: @escaping (DetectionResult?, Float, Float, [Float]?) -> Void) {
         queue.async { [self] in
+            recent.append(contentsOf: samples)
+            if recent.count > recentLimit {
+                recent.removeFirst(recent.count - recentLimit)
+            }
             let frames = extractor.append(samples, streamTime: time)
             var result: DetectionResult?
             var confidence: Float = 0
@@ -463,7 +487,8 @@ final class MatchingPipeline: @unchecked Sendable {
                 }
             }
             lastLevel = energy
-            completion(result, min(1, energy * 8), confidence)
+            let clip: [Float]? = result == nil ? nil : recent
+            completion(result, min(1, energy * 8), confidence, clip)
         }
     }
 }

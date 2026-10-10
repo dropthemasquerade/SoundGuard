@@ -25,6 +25,9 @@ final class MonitoringCoordinator {
 
     private var observers: [NSObjectProtocol] = []
     private var boundaryTimer: Timer?
+    private var suppressDetection = false
+    private var suppressGeneration = 0
+    private var suppressTask: Task<Void, Never>?
 
     init(events: EventStore, settings: SettingsStore, references: ReferenceAudioService) {
         self.events = events
@@ -36,6 +39,10 @@ final class MonitoringCoordinator {
                 Task { @MainActor in
                     guard let coordinator = self else { return }
                     coordinator.liveLevel = level
+                    if coordinator.suppressDetection {
+                        coordinator.liveConfidence = 0
+                        return
+                    }
                     coordinator.liveConfidence = confidence
                     if let result {
                         coordinator.handleDetection(result)
@@ -54,7 +61,7 @@ final class MonitoringCoordinator {
         capture.onError = { [weak self] error in
             Task { @MainActor in
                 guard let coordinator = self else { return }
-                coordinator.dispatch(.captureFailed(error.localizedDescription))
+                coordinator.dispatch(.captureFailed(AudioSessionController.message(for: error)))
             }
         }
         listenForSessionEvents()
@@ -98,6 +105,17 @@ final class MonitoringCoordinator {
         return rebuilt
     }
 
+    func prepareForPreview() throws {
+        if capture.isRunning || standby.isRunning {
+            return
+        }
+        try session.keepCurrentSessionForPlayback()
+    }
+
+    func preparePlaybackSession() throws {
+        try session.configureForPlayback()
+    }
+
     func startListening() {
         guard hasActiveTarget else {
             lastError = "Save a reference sound before arming."
@@ -121,6 +139,42 @@ final class MonitoringCoordinator {
     func consumeError() {
         lastError = nil
         machine.clearError()
+    }
+
+    /// Ignore microphone matches while a saved recording is playing out of the speaker.
+    func beginPlaybackGuard() {
+        suppressGeneration += 1
+        suppressDetection = true
+        suppressTask?.cancel()
+        suppressTask = nil
+        matching.flushDetectionState()
+    }
+
+    /// Keep ignoring for a short tail after playback, then clear hits gathered from that tail.
+    func cancelPlaybackGuard() {
+        suppressGeneration += 1
+        suppressTask?.cancel()
+        suppressTask = nil
+        let generation = suppressGeneration
+        matching.flushDetectionState()
+        matching.whenIdle { [weak self] in
+            guard let self, generation == self.suppressGeneration else { return }
+            self.suppressDetection = false
+        }
+    }
+
+    func endPlaybackGuard() {
+        let generation = suppressGeneration
+        suppressTask?.cancel()
+        suppressTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            guard !Task.isCancelled, generation == self.suppressGeneration else { return }
+            self.matching.flushDetectionState()
+            self.matching.whenIdle { [weak self] in
+                guard let self, generation == self.suppressGeneration else { return }
+                self.suppressDetection = false
+            }
+        }
     }
 
     func handleSceneActive() {
@@ -205,11 +259,15 @@ final class MonitoringCoordinator {
             capture.stop()
             liveLevel = 0
             liveConfidence = 0
+            // Stay on playAndRecord. A later switch back from `.playback` while locked
+            // is rejected with OSStatus !int.
+            try? session.configureForMonitoring()
             standby.start()
         case .leaveStandby:
             standby.stop()
         case .startAlarm(let snapshot):
-            do { try session.configureForPlayback() } catch { lastError = error.localizedDescription }
+            // The mic session is already active. If iOS refuses a mode change, still play.
+            try? session.configureForPlayback()
             alarmManager.start(
                 snapshot: snapshot,
                 volume: settings.alarmVolume,
@@ -247,14 +305,23 @@ final class MonitoringCoordinator {
         }
         standby.stop()
         do {
-            try session.configureForMonitoring()
-            matching.resetSession()
-            reloadTarget()
-            try capture.start()
-            dispatch(.captureStarted)
+            try beginCapture()
         } catch {
-            dispatch(.captureFailed(error.localizedDescription))
+            capture.stop()
+            do {
+                try beginCapture()
+            } catch {
+                dispatch(.captureFailed(AudioSessionController.message(for: error)))
+            }
         }
+    }
+
+    private func beginCapture() throws {
+        try session.configureForMonitoring()
+        matching.resetSession()
+        reloadTarget()
+        try capture.start()
+        dispatch(.captureStarted)
     }
 
     private func syncPublishedState() {
@@ -360,6 +427,24 @@ final class MatchingPipeline: @unchecked Sendable {
         queue.async { [self] in
             detection.resetLatch()
             matcher.resetBuffer()
+        }
+    }
+
+    /// Drop buffered audio and any consecutive hits. Queued ahead of `whenIdle`.
+    func flushDetectionState() {
+        queue.async { [self] in
+            extractor.reset()
+            matcher.resetBuffer()
+            detection.resetLatch()
+            detection.resetSession()
+        }
+    }
+
+    func whenIdle(_ body: @escaping @MainActor () -> Void) {
+        queue.async {
+            Task { @MainActor in
+                body()
+            }
         }
     }
 

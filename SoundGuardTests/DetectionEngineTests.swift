@@ -49,6 +49,52 @@ final class DetectionEngineTests: XCTestCase {
         }
     }
 
+    func testStrongMatchFiresWithoutTheFullStreakOrNoiseRatio() {
+        let engine = DetectionEngine(parameters: DetectionParameters(
+            similarityThreshold: 0.78,
+            consecutiveHits: 6,
+            energyRatio: 4,
+            minEnergy: 0.001,
+            cooldown: 0,
+            noiseAdapt: 0.5
+        ))
+        for index in 0..<8 {
+            XCTAssertNil(engine.process(MatchScore(similarity: 0.1, energy: 0.2, timestamp: Double(index) * 0.01)))
+        }
+        XCTAssertNil(engine.process(MatchScore(similarity: 0.99, energy: 0.01, timestamp: 1)))
+        let result = engine.process(MatchScore(similarity: 0.99, energy: 0.01, timestamp: 1.01))
+        XCTAssertEqual(result?.confidence ?? 0, 0.99, accuracy: 0.001)
+    }
+
+    func testStrongMatchSurvivesOneWeakFrame() {
+        let engine = DetectionEngine(parameters: DetectionParameters(
+            similarityThreshold: 0.8,
+            consecutiveHits: 4,
+            energyRatio: 1,
+            minEnergy: 0.001,
+            cooldown: 0,
+            noiseAdapt: 0.05
+        ))
+        XCTAssertNil(engine.process(MatchScore(similarity: 0.99, energy: 0.05, timestamp: 1)))
+        XCTAssertNil(engine.process(MatchScore(similarity: 0, energy: 0.05, timestamp: 1.01)))
+        XCTAssertNotNil(engine.process(MatchScore(similarity: 0.97, energy: 0.05, timestamp: 1.02)))
+    }
+
+    func testBorderlineMatchStillNeedsEveryHit() {
+        let engine = DetectionEngine(parameters: DetectionParameters(
+            similarityThreshold: 0.78,
+            consecutiveHits: 4,
+            energyRatio: 1,
+            minEnergy: 0.001,
+            cooldown: 0,
+            noiseAdapt: 0.05
+        ))
+        XCTAssertNil(engine.process(MatchScore(similarity: 0.85, energy: 0.05, timestamp: 1)))
+        XCTAssertNil(engine.process(MatchScore(similarity: 0.85, energy: 0.05, timestamp: 1.01)))
+        XCTAssertNil(engine.process(MatchScore(similarity: 0.85, energy: 0.05, timestamp: 1.02)))
+        XCTAssertNotNil(engine.process(MatchScore(similarity: 0.85, energy: 0.05, timestamp: 1.03)))
+    }
+
     func testHitCounterResetsOnMiss() {
         let engine = DetectionEngine(parameters: DetectionParameters(
             similarityThreshold: 0.8,

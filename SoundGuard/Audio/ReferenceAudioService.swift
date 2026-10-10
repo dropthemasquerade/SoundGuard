@@ -2,9 +2,27 @@ import AVFoundation
 import Foundation
 
 final class ReferenceAudioService {
+    private final class PreviewDelegate: NSObject, AVAudioPlayerDelegate {
+        var onFinish: (() -> Void)?
+        weak var player: AVAudioPlayer?
+
+        func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+            guard player === self.player else { return }
+            let finish = onFinish
+            onFinish = nil
+            self.player = nil
+            finish?()
+        }
+
+        func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+            audioPlayerDidFinishPlaying(player, successfully: false)
+        }
+    }
+
     private let fileManager = FileManager.default
     private var recorder: AVAudioRecorder?
     private var previewPlayer: AVAudioPlayer?
+    private let previewDelegate = PreviewDelegate()
     private let extractor = AudioFeatureExtractor()
 
     var referencesDirectory: URL {
@@ -108,15 +126,30 @@ final class ReferenceAudioService {
         try? fileManager.removeItem(at: url)
     }
 
-    func preview(_ url: URL) throws {
-        stopPreview()
+    func preview(_ url: URL, onFinish: @escaping () -> Void) throws {
+        cancelPreview()
         let player = try AVAudioPlayer(contentsOf: url)
+        player.delegate = previewDelegate
+        previewDelegate.player = player
+        previewDelegate.onFinish = onFinish
         player.prepareToPlay()
-        player.play()
+        guard player.play() else {
+            previewDelegate.onFinish = nil
+            previewDelegate.player = nil
+            throw NSError(domain: "SoundGuard", code: 36, userInfo: [NSLocalizedDescriptionKey: "Could not play this recording"])
+        }
         previewPlayer = player
     }
 
     func stopPreview() {
+        let finish = previewDelegate.onFinish
+        cancelPreview()
+        finish?()
+    }
+
+    private func cancelPreview() {
+        previewDelegate.onFinish = nil
+        previewDelegate.player = nil
         previewPlayer?.stop()
         previewPlayer = nil
     }

@@ -91,17 +91,27 @@ final class AppModel {
     func preview(_ sound: ReferenceSound) {
         let url = references.fileURL(for: sound.fileName)
         do {
-            try coordinator.preparePlaybackSession()
-            try references.preview(url)
+            coordinator.beginPlaybackGuard()
+            try coordinator.prepareForPreview()
+            try references.preview(url) { [weak self] in
+                Task { @MainActor in
+                    self?.completePreview()
+                }
+            }
             previewingID = sound.id
         } catch {
-            banner = error.localizedDescription
+            coordinator.cancelPlaybackGuard()
+            banner = AudioSessionController.message(for: error)
         }
     }
 
     func stopPreview() {
         references.stopPreview()
+    }
+
+    private func completePreview() {
         previewingID = nil
+        coordinator.endPlaybackGuard()
     }
 
     func beginRecording(defaultName: String? = nil, defaultProfile: SoundProfile? = nil) {
@@ -123,8 +133,8 @@ final class AppModel {
 
     private func startRecorder() {
         do {
-            try coordinator.preparePlaybackSession()
             coordinator.stopListening()
+            try coordinator.preparePlaybackSession()
             recordURL = try references.startRecording()
             isRecording = true
             recordElapsed = 0
@@ -137,7 +147,7 @@ final class AppModel {
                 }
             }
         } catch {
-            banner = error.localizedDescription
+            banner = AudioSessionController.message(for: error)
         }
     }
 
@@ -233,11 +243,5 @@ final class AppModel {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
         return formatter.string(from: Date())
-    }
-}
-
-extension MonitoringCoordinator {
-    func preparePlaybackSession() throws {
-        try AudioSessionController().configureForPlayback()
     }
 }

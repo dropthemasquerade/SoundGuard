@@ -5,20 +5,22 @@ import Foundation
 /// while the phone is locked. Playback is effectively silent. Force-quit still stops it.
 final class StandbyAudioService {
     private var player: AVAudioPlayer?
-    private let session = AVAudioSession.sharedInstance()
 
     var isRunning: Bool { player?.isPlaying == true }
 
+    /// Plays on the session the coordinator already activated. Switching to `.playback`
+    /// here makes the later microphone start fail with OSStatus !int while locked.
     func start() {
         if isRunning { return }
         do {
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            try session.setActive(true)
             let player = try AVAudioPlayer(contentsOf: Self.toneURL())
             player.numberOfLoops = -1
             player.volume = 1
             player.prepareToPlay()
-            player.play()
+            guard player.play() else {
+                self.player = nil
+                return
+            }
             self.player = player
         } catch {
             self.player = nil

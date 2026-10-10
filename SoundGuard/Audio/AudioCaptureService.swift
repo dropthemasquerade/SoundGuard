@@ -16,6 +16,7 @@ final class AudioCaptureService {
     private var converter: AVAudioConverter?
     private let lock = NSLock()
     private var running = false
+    private var tapInstalled = false
 
     var isRunning: Bool {
         lock.lock(); defer { lock.unlock() }
@@ -39,13 +40,25 @@ final class AudioCaptureService {
         }
 
         converter = AVAudioConverter(from: inputFormat, to: targetFormat)
-        input.removeTap(onBus: 0)
+        if tapInstalled {
+            input.removeTap(onBus: 0)
+            tapInstalled = false
+        }
         input.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, time in
             self?.handle(buffer: buffer, time: time)
         }
+        tapInstalled = true
 
-        engine.prepare()
-        try engine.start()
+        do {
+            engine.prepare()
+            try engine.start()
+        } catch {
+            input.removeTap(onBus: 0)
+            tapInstalled = false
+            if engine.isRunning { engine.stop() }
+            converter = nil
+            throw error
+        }
         lock.lock()
         running = true
         lock.unlock()
@@ -53,12 +66,13 @@ final class AudioCaptureService {
 
     func stop() {
         lock.lock()
-        let wasRunning = running
         running = false
         lock.unlock()
-        guard wasRunning else { return }
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        if tapInstalled {
+            engine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
+        }
+        if engine.isRunning { engine.stop() }
         converter = nil
     }
 

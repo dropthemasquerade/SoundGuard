@@ -1,0 +1,129 @@
+import SwiftUI
+
+@MainActor
+struct SettingsView: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var settings = model.settings
+        ZStack {
+            NeonBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("SYSTEM")
+                        .font(SGTheme.title)
+                        .foregroundStyle(SGTheme.blue)
+                        .padding(.top, 18)
+
+                    panel("MATCHING") {
+                        labeled("SIMILARITY  \(Int(settings.similarityThreshold * 100))%") {
+                            Slider(value: $settings.similarityThreshold, in: 0.62...0.94, step: 0.01)
+                                .tint(SGTheme.cyan)
+                                .onChange(of: settings.similarityThreshold) { _, _ in
+                                    model.applyDetectionSettings()
+                                }
+                        }
+                        labeled("CONSECUTIVE HITS  \(settings.consecutiveHits)") {
+                            Stepper("", value: $settings.consecutiveHits, in: 2...8)
+                                .onChange(of: settings.consecutiveHits) { _, _ in
+                                    model.applyDetectionSettings()
+                                }
+                        }
+                    }
+
+                    panel("ALARM") {
+                        Toggle("HAPTICS", isOn: $settings.hapticsEnabled)
+                        Toggle("NOTIFICATIONS", isOn: $settings.notificationsEnabled)
+                        labeled("VOLUME  \(Int(settings.alarmVolume * 100))%") {
+                            Slider(value: $settings.alarmVolume, in: 0.2...1.0)
+                                .tint(SGTheme.magenta)
+                        }
+                    }
+                    .tint(SGTheme.cyan)
+
+                    panel("ACTIVE HOURS") {
+                        Toggle("LIMIT LISTENING TO A WINDOW", isOn: $settings.scheduleEnabled)
+                            .onChange(of: settings.scheduleEnabled) { _, _ in
+                                model.applySchedule()
+                            }
+                        if settings.scheduleEnabled {
+                            labeled("START  \(MonitoringWindow.clock(settings.windowStartMinutes))") {
+                                DatePicker(
+                                    "START",
+                                    selection: minutesBinding(\.windowStartMinutes),
+                                    displayedComponents: .hourAndMinute
+                                )
+                                .labelsHidden()
+                            }
+                            labeled("END  \(MonitoringWindow.clock(settings.windowEndMinutes))") {
+                                DatePicker(
+                                    "END",
+                                    selection: minutesBinding(\.windowEndMinutes),
+                                    displayedComponents: .hourAndMinute
+                                )
+                                .labelsHidden()
+                            }
+                            Text("Listening runs only from START until END, including a range that passes midnight. The same start and end means all day. An alarm that already fired stays on until you acknowledge it. While armed outside the window, SoundGuard stays awake so the microphone can start on time. Force-quit or reboot still stops it.")
+                                .font(SGTheme.micro)
+                                .foregroundStyle(SGTheme.dim)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .tint(SGTheme.cyan)
+
+                    panel("RESUME") {
+                        Toggle("RESUME AFTER RESET", isOn: $settings.resumeAfterReset)
+                        Toggle("RESUME AFTER INTERRUPT", isOn: $settings.resumeAfterInterrupt)
+                    }
+                    .tint(SGTheme.cyan)
+
+                    panel("LIMITS") {
+                        Text("Feature matching works for stable beeps, chimes, and repeating alerts. It is not a general speech or open-set classifier. Background listening needs an active audio session and stops if you force-quit, reboot, or iOS suspends the process. Notifications are best-effort and are not a guaranteed alarm channel.")
+                            .font(SGTheme.micro)
+                            .foregroundStyle(SGTheme.dim)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Text("SOUNDGUARD  ·  LOCAL ONLY  ·  iOS 17+")
+                        .font(SGTheme.micro)
+                        .foregroundStyle(SGTheme.dim)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 24)
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    private func panel(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionLabel(text: title)
+            content()
+        }
+        .padding(16)
+        .neonPanel(SGTheme.blue)
+    }
+
+    private func minutesBinding(_ keyPath: ReferenceWritableKeyPath<SettingsStore, Int>) -> Binding<Date> {
+        Binding(
+            get: {
+                let minutes = model.settings[keyPath: keyPath]
+                return Calendar.current.date(from: DateComponents(hour: minutes / 60, minute: minutes % 60)) ?? Date()
+            },
+            set: { newValue in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                model.settings[keyPath: keyPath] = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+                model.applySchedule()
+            }
+        )
+    }
+
+    private func labeled(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(SGTheme.micro)
+                .foregroundStyle(SGTheme.dim)
+            content()
+        }
+    }
+}

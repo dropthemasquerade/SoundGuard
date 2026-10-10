@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  syntax:
+    name: Syntax
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: Compile app and tests
+        run: |
+          xcodebuild \
+            -project SoundGuard.xcodeproj \
+            -scheme SoundGuard \
+            -destination 'generic/platform=iOS Simulator' \
+            -sdk iphonesimulator \
+            -derivedDataPath "${RUNNER_TEMP}/DerivedData" \
+            build-for-testing \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+  test:
+    name: Unit tests
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run unit tests
+        run: |
+          UDID=$(python3 - << 'PY'
+          import json, subprocess, sys
+          raw = subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"])
+          data = json.loads(raw)
+          phones = []
+          for runtime, devices in data.get("devices", {}).items():
+              if "iOS" not in runtime:
+                  continue
+              for device in devices:
+                  name = device.get("name", "")
+                  if device.get("isAvailable") and name.startswith("iPhone"):
+                      phones.append((runtime, name, device["udid"]))
+          if not phones:
+              sys.exit("No available iPhone simulator")
+          runtime, name, udid = sorted(phones)[-1]
+          print(f"Using {name} on {runtime}", file=sys.stderr)
+          print(udid)
+          PY
+          )
+          xcodebuild test \
+            -project SoundGuard.xcodeproj \
+            -scheme SoundGuard \
+            -destination "platform=iOS Simulator,id=${UDID}" \
+            -derivedDataPath "${RUNNER_TEMP}/DerivedData" \
+            -resultBundlePath "${RUNNER_TEMP}/SoundGuard.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ runner.temp }}/SoundGuard.xcresult
+          if-no-files-found: ignore
+
+  sources:
+    name: Project sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Every Swift file is in the Xcode project
+        run: |
+          python3 - << 'PY'
+          from pathlib import Path
+          import sys
+          project = Path("SoundGuard.xcodeproj/project.pbxproj").read_text()
+          missing = []
+          count = 0
+          for folder in ("SoundGuard", "SoundGuardTests"):
+              for path in sorted(Path(folder).rglob("*.swift")):
+                  count += 1
+                  if f"path = {path.name};" not in project:
+                      missing.append(str(path))
+          if missing:
+              print("These Swift files are missing from SoundGuard.xcodeproj:")
+              print("\n".join(missing))
+              print("Run: python3 scripts/generate_xcodeproj.py")
+              sys.exit(1)
+          print(f"{count} Swift files are in the Xcode project")
+          PY

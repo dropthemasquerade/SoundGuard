@@ -84,6 +84,23 @@ final class EventStore {
         try context.save()
     }
 
+    func updateSound(
+        id: UUID,
+        name: String,
+        duration: TimeInterval,
+        profile: SoundProfile,
+        templateData: Data
+    ) throws {
+        guard let row = record(id: id) else {
+            throw NSError(domain: "SoundGuard", code: 37, userInfo: [NSLocalizedDescriptionKey: "That target no longer exists"])
+        }
+        row.name = name
+        row.duration = duration
+        row.profileRaw = profile.rawValue
+        row.templateData = templateData
+        try context.save()
+    }
+
     func events() -> [AlarmEvent] {
         let descriptor = FetchDescriptor<AlarmEventRecord>(sortBy: [SortDescriptor(\.detectedAt, order: .reverse)])
         return (try? context.fetch(descriptor).map { $0.asEvent() }) ?? []

@@ -20,6 +20,12 @@ struct MonitorView: View {
                     .font(SGTheme.micro)
                     .tracking(3)
                     .foregroundStyle(SGTheme.dim)
+                if let quietLine {
+                    Text(quietLine)
+                        .font(SGTheme.micro)
+                        .tracking(2)
+                        .foregroundStyle(model.coordinator.quietPosture == .handheldQuiet ? SGTheme.magenta : SGTheme.cyan)
+                }
                 LevelMeterView(level: model.coordinator.liveLevel)
                     .padding(.horizontal, 28)
                 Spacer()
@@ -79,12 +85,22 @@ struct MonitorView: View {
                     model.disarm()
                 }
             } else if model.coordinator.phase == .alarming {
-                NeonButton(title: "ACKNOWLEDGE ALARM", color: SGTheme.red) {
-                    model.acknowledge()
+                VStack(spacing: 10) {
+                    NeonButton(title: "ACKNOWLEDGE ALARM", color: SGTheme.red) {
+                        model.acknowledge()
+                    }
+                    NeonButton(title: "STOP", color: SGTheme.magenta, filled: false) {
+                        model.stopAlarm()
+                    }
                 }
             } else if model.coordinator.phase == .acknowledged {
-                NeonButton(title: "RESET LISTENING", color: SGTheme.cyan) {
-                    model.resetAlarm()
+                VStack(spacing: 10) {
+                    NeonButton(title: "RESET LISTENING", color: SGTheme.cyan) {
+                        model.resetAlarm()
+                    }
+                    NeonButton(title: "STOP", color: SGTheme.magenta, filled: false) {
+                        model.stopAlarm()
+                    }
                 }
             } else if model.coordinator.phase == .permissionDenied {
                 NeonButton(title: "GRANT MICROPHONE", color: .orange) {
@@ -117,6 +133,23 @@ struct MonitorView: View {
         case .alarming: return "TARGET LOCK"
         case .acknowledged: return "ALARM ACKNOWLEDGED"
         case .resetting: return "RESETTING"
+        }
+    }
+
+    private var quietLine: String? {
+        guard model.settings.handheldQuietEnabled else { return nil }
+        switch model.coordinator.quietPosture {
+        case .off:
+            return nil
+        case .handheldQuiet:
+            if model.coordinator.phase == .alarming {
+                return "HANDHELD QUIET · EVENT LOGGED"
+            }
+            return "HANDHELD QUIET"
+        case .alertsOn:
+            return "ALERTS ON"
+        case .uncertain:
+            return "HOLD STATE UNCERTAIN"
         }
     }
 }

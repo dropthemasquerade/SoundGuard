@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		043B4C01A9A68578330654CC /* QuietModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C17B5D4792C0CF2E4429B829 /* QuietModeTests.swift */; };
+		80034F1D6280A2DC29FA805F /* CaptureProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68BE780C18A75739FFB2C20 /* CaptureProcessorTests.swift */; };
+		B57859B6DABD932087B4384F /* CaptureEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 554C78E0FDC00ED021625A7D /* CaptureEditorView.swift */; };
+		DD2051928623677258674DAA /* CaptureProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBCD305E9518BF4DD8E17CC1 /* CaptureProcessor.swift */; };
 		07DF9CB5DAB1C2B95BB7BBC8 /* PersistenceStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A17EBA0A817F501445BCE5 /* PersistenceStack.swift */; };
 		10D72A0621FA3BF4DBE34E24 /* AppStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EF361582137F78C4C24354D /* AppStateMachine.swift */; };
 		15F07C208C528FD59685EF22 /* SoundMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3360EBBECF5B9975A9F3D3A5 /* SoundMatcher.swift */; };
@@ -17,17 +21,22 @@
 		2CBACAE59A89DD14229CC26E /* DetectionEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B32A790CAEA5AF787E6A8AE2 /* DetectionEngineTests.swift */; };
 		2FDC96AF3782C804B2907F71 /* NeonControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A2C6D46167B90014D722DD /* NeonControls.swift */; };
 		315C584084709669812D7AD2 /* DetectionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E84D8735BBF8BB32F838E081 /* DetectionTypes.swift */; };
+		333A159E06ABAB940D832AA2 /* AlertPolicyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073D0DA35129E96F4A35A123 /* AlertPolicyManager.swift */; };
 		39FEEADC115AB6545CC77751 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD4714B9A310C02C07C3EAD /* NotificationService.swift */; };
 		3D262EABD71830C01F085B81 /* AlarmTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6464ACD6A0BCB83EB7056EB /* AlarmTone.swift */; };
 		41B4304911AF11D726D4B532 /* CyberpunkTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 729F1B59CBF7DC76ED411C1B /* CyberpunkTheme.swift */; };
 		463B5809C96F04711BB6D3B1 /* DetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCFF5857C2FDBDA2057E25EE /* DetectionEngine.swift */; };
 		4E05685038FC5C44932D2BB3 /* EventStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1149B6C8310AB2E2C54D1B30 /* EventStore.swift */; };
 		4FF417ED6A12B7489AFCACEC /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B520197B106B20E08D9AF2B /* EventsView.swift */; };
+		53BD6EB2F5868019644D7E61 /* HandheldStateDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04ACF8B727D96F0ECC6464D1 /* HandheldStateDetector.swift */; };
+		563D6BC484F601C7447E0895 /* HandheldState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15705E7DE0E54269038BB994 /* HandheldState.swift */; };
 		596F8B5C0DA609A246BC7593 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF22D4D70780542586B53A08 /* RootView.swift */; };
+		5C2ECFEE89C9DA7739CA0364 /* HandheldMotionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC84B616B46DEACE7FFE21E0 /* HandheldMotionMonitor.swift */; };
 		6DFB94BAEF6BDC03FEA9B9CE /* ReferenceAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99A03D1B2641F02354842D47 /* ReferenceAudioService.swift */; };
 		773CD349E771872E28D35BAA /* NotificationPresetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D670F72A0B05DBF20528D358 /* NotificationPresetTests.swift */; };
 		7F8114FF0487080265ADD826 /* AudioFeatureExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D821102862359225B77A467 /* AudioFeatureExtractor.swift */; };
 		84D282FA33BB35C0531CA661 /* AlarmManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9F91431E42CCF654A658F /* AlarmManager.swift */; };
+		88E94C159AED33916C095A4E /* HandheldQuietModeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2BA7526D5A4C8B809853D9 /* HandheldQuietModeManager.swift */; };
 		931F74CCE760BE62691A386B /* MonitoringWindowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C816FB3EB8E745DA49CCA5 /* MonitoringWindowTests.swift */; };
 		95069C9CA5D7018EED222AC8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 47FCF36E99BAB9DA7DB4AF06 /* PrivacyInfo.xcprivacy */; };
 		A58F52C4B0C234BAC9047272 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70545BCA1C8C7B3B5603140E /* AppModel.swift */; };
@@ -65,8 +74,14 @@
 
 /* Begin PBXFileReference section */
 		03E87B2C6C55DF41176061C1 /* AppPhase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPhase.swift; sourceTree = "<group>"; };
+		554C78E0FDC00ED021625A7D /* CaptureEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureEditorView.swift; sourceTree = "<group>"; };
+		C68BE780C18A75739FFB2C20 /* CaptureProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureProcessorTests.swift; sourceTree = "<group>"; };
+		CBCD305E9518BF4DD8E17CC1 /* CaptureProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureProcessor.swift; sourceTree = "<group>"; };
+		04ACF8B727D96F0ECC6464D1 /* HandheldStateDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandheldStateDetector.swift; sourceTree = "<group>"; };
+		073D0DA35129E96F4A35A123 /* AlertPolicyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertPolicyManager.swift; sourceTree = "<group>"; };
 		10E8C81B31E12655758A793D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1149B6C8310AB2E2C54D1B30 /* EventStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventStore.swift; sourceTree = "<group>"; };
+		15705E7DE0E54269038BB994 /* HandheldState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandheldState.swift; sourceTree = "<group>"; };
 		16307361852805D4DDC8ED0D /* AlarmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmView.swift; sourceTree = "<group>"; };
 		195F9293022CEE80C9E8D0C0 /* SoundGuardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SoundGuardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2B8D77A8D75FB2B5B148BDCE /* AlertAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertAudioService.swift; sourceTree = "<group>"; };
@@ -102,7 +117,9 @@
 		B0CDA55633621B5259767DEF /* RecordSoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordSoundView.swift; sourceTree = "<group>"; };
 		B32A790CAEA5AF787E6A8AE2 /* DetectionEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionEngineTests.swift; sourceTree = "<group>"; };
 		BFFD3D07A9FB5D9A14A29EC4 /* AlarmToneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmToneTests.swift; sourceTree = "<group>"; };
+		C17B5D4792C0CF2E4429B829 /* QuietModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuietModeTests.swift; sourceTree = "<group>"; };
 		C5EE50C88D9013D1324A0E59 /* WaveFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveFile.swift; sourceTree = "<group>"; };
+		CC84B616B46DEACE7FFE21E0 /* HandheldMotionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandheldMotionMonitor.swift; sourceTree = "<group>"; };
 		D0C9F91431E42CCF654A658F /* AlarmManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmManager.swift; sourceTree = "<group>"; };
 		D3C816FB3EB8E745DA49CCA5 /* MonitoringWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitoringWindowTests.swift; sourceTree = "<group>"; };
 		D6464ACD6A0BCB83EB7056EB /* AlarmTone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmTone.swift; sourceTree = "<group>"; };
@@ -111,6 +128,7 @@
 		E84D8735BBF8BB32F838E081 /* DetectionTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionTypes.swift; sourceTree = "<group>"; };
 		EFD4714B9A310C02C07C3EAD /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		F404938EFBCE2A4690690F55 /* NotificationPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPresets.swift; sourceTree = "<group>"; };
+		FE2BA7526D5A4C8B809853D9 /* HandheldQuietModeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandheldQuietModeManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -149,6 +167,7 @@
 				FDE34166A738D2849F923B28 /* Core */,
 				B6EE7772133A9CA73E65D474 /* Monitoring */,
 				E90B71CD5441C432FA8D9A14 /* Persistence */,
+				3B4C2D3FF6E960638EE5FA0D /* QuietMode */,
 				8B0C644487244595A7EC8EDA /* Resources */,
 				20EB6F20BE4344DAA35294F3 /* UI */,
 				976A0EAA5C32531DB383BD79 /* Assets.xcassets */,
@@ -180,6 +199,7 @@
 			isa = PBXGroup;
 			children = (
 				6F4F701235EF959540F054E1 /* AudioCaptureService.swift */,
+				CBCD305E9518BF4DD8E17CC1 /* CaptureProcessor.swift */,
 				6D821102862359225B77A467 /* AudioFeatureExtractor.swift */,
 				46120906A42CEE4C416A3CAB /* AudioSessionController.swift */,
 				50ADBFC217B3BCECFF6332F7 /* DSP.swift */,
@@ -193,10 +213,23 @@
 			path = Audio;
 			sourceTree = "<group>";
 		};
+		3B4C2D3FF6E960638EE5FA0D /* QuietMode */ = {
+			isa = PBXGroup;
+			children = (
+				073D0DA35129E96F4A35A123 /* AlertPolicyManager.swift */,
+				CC84B616B46DEACE7FFE21E0 /* HandheldMotionMonitor.swift */,
+				FE2BA7526D5A4C8B809853D9 /* HandheldQuietModeManager.swift */,
+				15705E7DE0E54269038BB994 /* HandheldState.swift */,
+				04ACF8B727D96F0ECC6464D1 /* HandheldStateDetector.swift */,
+			);
+			path = QuietMode;
+			sourceTree = "<group>";
+		};
 		46D8E9BC03A7147E21A9E813 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
 				16307361852805D4DDC8ED0D /* AlarmView.swift */,
+				554C78E0FDC00ED021625A7D /* CaptureEditorView.swift */,
 				9B520197B106B20E08D9AF2B /* EventsView.swift */,
 				4413AF859B90E7A31195E0DC /* MonitorView.swift */,
 				B0CDA55633621B5259767DEF /* RecordSoundView.swift */,
@@ -248,10 +281,12 @@
 			isa = PBXGroup;
 			children = (
 				BFFD3D07A9FB5D9A14A29EC4 /* AlarmToneTests.swift */,
+				C68BE780C18A75739FFB2C20 /* CaptureProcessorTests.swift */,
 				9DE3B0B04F2D313204F45A85 /* AppStateMachineTests.swift */,
 				B32A790CAEA5AF787E6A8AE2 /* DetectionEngineTests.swift */,
 				D3C816FB3EB8E745DA49CCA5 /* MonitoringWindowTests.swift */,
 				D670F72A0B05DBF20528D358 /* NotificationPresetTests.swift */,
+				C17B5D4792C0CF2E4429B829 /* QuietModeTests.swift */,
 				37820C47C13D4F30FD816D18 /* SoundMatcherTests.swift */,
 			);
 			path = SoundGuardTests;
@@ -414,10 +449,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				CFB8D8C88001CA2A2E2E5E49 /* AlarmToneTests.swift in Sources */,
+				80034F1D6280A2DC29FA805F /* CaptureProcessorTests.swift in Sources */,
 				B23FB59DFAD37A4D34DCD6A6 /* AppStateMachineTests.swift in Sources */,
 				2CBACAE59A89DD14229CC26E /* DetectionEngineTests.swift in Sources */,
 				931F74CCE760BE62691A386B /* MonitoringWindowTests.swift in Sources */,
 				773CD349E771872E28D35BAA /* NotificationPresetTests.swift in Sources */,
+				043B4C01A9A68578330654CC /* QuietModeTests.swift in Sources */,
 				1A3BC078FF877751BAFEEDAC /* SoundMatcherTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -433,6 +470,8 @@
 				39FEEADC115AB6545CC77751 /* NotificationService.swift in Sources */,
 				A58F52C4B0C234BAC9047272 /* AppModel.swift in Sources */,
 				1ECD388F786F0925EDF1D84A /* AudioCaptureService.swift in Sources */,
+				DD2051928623677258674DAA /* CaptureProcessor.swift in Sources */,
+				B57859B6DABD932087B4384F /* CaptureEditorView.swift in Sources */,
 				7F8114FF0487080265ADD826 /* AudioFeatureExtractor.swift in Sources */,
 				AE16B2B9C44CF7170F80DA69 /* AudioSessionController.swift in Sources */,
 				FB4D84B2D8DC323DA50AFA74 /* DSP.swift in Sources */,
@@ -451,6 +490,11 @@
 				07DF9CB5DAB1C2B95BB7BBC8 /* PersistenceStack.swift in Sources */,
 				FEEC23EBED0254A0BE39E29F /* SettingsStore.swift in Sources */,
 				FC025F93824ED8893DDF0169 /* TriggerClipStore.swift in Sources */,
+				333A159E06ABAB940D832AA2 /* AlertPolicyManager.swift in Sources */,
+				5C2ECFEE89C9DA7739CA0364 /* HandheldMotionMonitor.swift in Sources */,
+				88E94C159AED33916C095A4E /* HandheldQuietModeManager.swift in Sources */,
+				563D6BC484F601C7447E0895 /* HandheldState.swift in Sources */,
+				53BD6EB2F5868019644D7E61 /* HandheldStateDetector.swift in Sources */,
 				E733E6D08EDB6E594F938004 /* SoundGuardApp.swift in Sources */,
 				2FDC96AF3782C804B2907F71 /* NeonControls.swift in Sources */,
 				A9EACDA79195E83E59FD2B7F /* AlarmView.swift in Sources */,

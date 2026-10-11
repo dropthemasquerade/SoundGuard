@@ -70,18 +70,36 @@ final class AudioFeatureExtractor {
         return (template, samples, duration)
     }
 
-    static func loadMono16k(url: URL) throws -> ([Float], TimeInterval) {
+    static func loadMono16k(url: URL, maxSeconds: Double? = nil) throws -> ([Float], TimeInterval) {
         let file = try AVAudioFile(forReading: url)
         let format = file.processingFormat
-        let frameCount = AVAudioFrameCount(file.length)
+        var frameCount = AVAudioFrameCount(file.length)
+        if let maxSeconds {
+            let sourceLimit = AVAudioFrameCount((maxSeconds * format.sampleRate).rounded(.up)) + 64
+            frameCount = min(frameCount, max(1, sourceLimit))
+        }
         guard frameCount > 0,
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
             throw NSError(domain: "SoundGuard", code: 10, userInfo: [NSLocalizedDescriptionKey: "Empty audio file"])
         }
         try file.read(into: buffer)
-        let samples = try AudioBufferConvert.floatMono16k(buffer)
+        var samples = try AudioBufferConvert.floatMono16k(buffer)
+        if let maxSeconds {
+            let limit = Int((maxSeconds * AudioDSP.sampleRate).rounded(.down))
+            if limit >= 0, samples.count > limit {
+                samples.removeSubrange(limit...)
+            }
+        }
         let duration = Double(samples.count) / AudioDSP.sampleRate
         return (samples, duration)
+    }
+
+    static func loadEditorAudio(url: URL, maxSeconds: Double = CaptureProcessor.editorLoadLimit) throws -> (samples: [Float], truncated: Bool) {
+        let file = try AVAudioFile(forReading: url)
+        let sourceRate = file.fileFormat.sampleRate
+        let sourceDuration = sourceRate > 0 ? Double(file.length) / sourceRate : 0
+        let (samples, _) = try loadMono16k(url: url, maxSeconds: maxSeconds)
+        return (samples, sourceDuration > maxSeconds + 0.02)
     }
 
     private func features(from frame: [Float], pitchWindow: [Float], timestamp: TimeInterval) -> AudioFrameFeatures {

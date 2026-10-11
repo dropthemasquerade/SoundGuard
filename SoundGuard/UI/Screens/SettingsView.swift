@@ -80,6 +80,58 @@ struct SettingsView: View {
                     }
                     .tint(SGTheme.cyan)
 
+                    panel("HANDHELD QUIET") {
+                        Toggle("SILENCE ALARM WHILE HELD", isOn: $settings.handheldQuietEnabled)
+                            .onChange(of: settings.handheldQuietEnabled) { _, _ in
+                                model.applyQuietSettings()
+                            }
+                        if settings.handheldQuietEnabled {
+                            Toggle("KEEP HAPTICS WHILE QUIET", isOn: $settings.handheldQuietHapticsEnabled)
+                                .onChange(of: settings.handheldQuietHapticsEnabled) { _, _ in
+                                    model.applyQuietSettings()
+                                }
+                            labeled("RESUME DELAY  \(Int(settings.resumeDelaySeconds))s") {
+                                Slider(value: $settings.resumeDelaySeconds, in: 0...15, step: 1)
+                                    .tint(SGTheme.magenta)
+                                    .onChange(of: settings.resumeDelaySeconds) { _, _ in
+                                        model.applyQuietSettings()
+                                    }
+                            }
+                            ForEach(QuietModeBehavior.allCases) { behavior in
+                                Button {
+                                    settings.quietModeBehavior = behavior
+                                    model.applyQuietSettings()
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(behavior.title)
+                                                .font(SGTheme.micro)
+                                                .foregroundStyle(settings.quietModeBehavior == behavior ? SGTheme.cyan : SGTheme.text)
+                                            Text(behavior.detail)
+                                                .font(SGTheme.micro)
+                                                .foregroundStyle(SGTheme.dim)
+                                        }
+                                        Spacer()
+                                        if settings.quietModeBehavior == behavior {
+                                            Text("ON")
+                                                .font(SGTheme.micro)
+                                                .foregroundStyle(SGTheme.bg)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(SGTheme.cyan, in: Capsule())
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            Text("This is an estimate from motion, not a guarantee the phone is in a hand. A brief shake does not count. Unknown or a stopped sensor does not mute. Listening keeps running, and a match is still logged. After the phone seems set down, an open alarm waits RESUME DELAY, then sounds again. Lock-screen audio can continue, but motion updates can stop in the background. When they stop, the alarm is not left silent. Force-quit or reboot stops both.")
+                                .font(SGTheme.micro)
+                                .foregroundStyle(SGTheme.dim)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .tint(SGTheme.cyan)
+
                     panel("ACTIVE HOURS") {
                         Toggle("LIMIT LISTENING TO A WINDOW", isOn: $settings.scheduleEnabled)
                             .onChange(of: settings.scheduleEnabled) { _, _ in
@@ -102,7 +154,7 @@ struct SettingsView: View {
                                 )
                                 .labelsHidden()
                             }
-                            Text("Listening runs only from START until END, including a range that passes midnight. The same start and end means all day. An alarm that already fired stays on until you acknowledge it. While armed outside the window, SoundGuard stays awake so the microphone can start on time. Force-quit or reboot still stops it.")
+                            Text("Listening runs only from START until END, including a range that passes midnight. The same start and end means all day. An alarm that already fired stays on until you acknowledge or stop it. Stop turns listening off. Reset listens again. While armed outside the window, SoundGuard stays awake so the microphone can start on time. Force-quit or reboot still stops it.")
                                 .font(SGTheme.micro)
                                 .foregroundStyle(SGTheme.dim)
                                 .fixedSize(horizontal: false, vertical: true)

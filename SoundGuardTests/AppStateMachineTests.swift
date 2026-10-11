@@ -38,6 +38,38 @@ final class AppStateMachineTests: XCTestCase {
         XCTAssertNil(machine.state.activeAlarm)
     }
 
+    func testStopFromAlarmDisarmsWithoutListeningAgain() {
+        var machine = AppStateMachine()
+        machine.setResumeFlags(afterReset: true, afterInterrupt: true)
+        _ = machine.handle(.permissionGranted)
+        let snap = AlarmSnapshot(id: UUID(), soundName: "BEEP", detectedAt: Date(), confidence: 0.93)
+        _ = machine.handle(.targetDetected(snap))
+        XCTAssertEqual(
+            machine.handle(.stopTapped),
+            [.stopAlarm, .persistAcknowledgement, .persistReset, .leaveStandby, .stopCapture]
+        )
+        XCTAssertEqual(machine.state.phase, .idle)
+        XCTAssertEqual(machine.state.activeAlarm, snap)
+        machine.clearActiveAlarm()
+        XCTAssertNil(machine.state.activeAlarm)
+        XCTAssertEqual(machine.handle(.stopTapped), [])
+    }
+
+    func testStopFromAcknowledgedDisarmsWithoutListeningAgain() {
+        var machine = AppStateMachine()
+        machine.setResumeFlags(afterReset: true, afterInterrupt: true)
+        _ = machine.handle(.permissionGranted)
+        let snap = AlarmSnapshot(id: UUID(), soundName: "BEEP", detectedAt: Date(), confidence: 0.93)
+        _ = machine.handle(.targetDetected(snap))
+        _ = machine.handle(.acknowledgeTapped)
+        XCTAssertEqual(
+            machine.handle(.stopTapped),
+            [.stopAlarm, .persistReset, .leaveStandby, .stopCapture]
+        )
+        XCTAssertEqual(machine.state.phase, .idle)
+        XCTAssertEqual(machine.state.activeAlarm, snap)
+    }
+
     func testResetFromAlarmingAcksAndStopsAudio() {
         var machine = AppStateMachine()
         _ = machine.handle(.permissionGranted)

@@ -34,7 +34,7 @@ struct AlarmView: View {
                     .padding(16)
                     .neonPanel(acknowledged ? SGTheme.cyan : SGTheme.red)
 
-                    Text("ALARM STAYS ON UNTIL YOU ACKNOWLEDGE.\nTHE TARGET SOUND ENDING DOES NOT CLEAR THIS.")
+                    Text(alarmCopy)
                         .font(SGTheme.micro)
                         .foregroundStyle(SGTheme.dim)
                         .multilineTextAlignment(.center)
@@ -46,15 +46,30 @@ struct AlarmView: View {
                         NeonButton(title: "RESET LISTENING", color: SGTheme.cyan) {
                             model.resetAlarm()
                         }
+                        stopButton
                     } else {
                         holdToAck
                         NeonButton(title: "ACKNOWLEDGE NOW", color: SGTheme.red) {
                             model.acknowledge()
                         }
+                        stopButton
                     }
                 }
                 .padding(20)
             }
+        }
+    }
+
+    private var alarmCopy: String {
+        if model.coordinator.quietPosture == .handheldQuiet && model.coordinator.phase == .alarming {
+            return "AUDIO IS HELD WHILE THE PHONE SEEMS HANDHELD.\nSETTING IT DOWN RESTORES THE ALARM IF YOU HAVE NOT ACKNOWLEDGED."
+        }
+        return "ALARM STAYS ON UNTIL YOU ACKNOWLEDGE OR STOP.\nSTOP TURNS LISTENING OFF SO YOU CAN ADJUST THE TARGET.\nRESET LISTENS AGAIN, AND A SOUND STILL PLAYING CAN ALARM IMMEDIATELY."
+    }
+
+    private var stopButton: some View {
+        NeonButton(title: "STOP", color: SGTheme.magenta, filled: false) {
+            model.stopAlarm()
         }
     }
 

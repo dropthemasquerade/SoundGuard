@@ -42,6 +42,23 @@ final class SettingsStore {
         get { AlarmTone(rawValue: alarmToneRaw) ?? .classic }
         set { alarmToneRaw = newValue.rawValue }
     }
+    var handheldQuietEnabled: Bool {
+        didSet { defaults.set(handheldQuietEnabled, forKey: Keys.handheldQuiet) }
+    }
+    var handheldQuietHapticsEnabled: Bool {
+        didSet { defaults.set(handheldQuietHapticsEnabled, forKey: Keys.handheldHaptics) }
+    }
+    var resumeDelaySeconds: Double {
+        didSet { defaults.set(resumeDelaySeconds, forKey: Keys.resumeDelay) }
+    }
+    var quietModeBehaviorRaw: String {
+        didSet { defaults.set(quietModeBehaviorRaw, forKey: Keys.quietBehavior) }
+    }
+
+    var quietModeBehavior: QuietModeBehavior {
+        get { QuietModeBehavior(rawValue: quietModeBehaviorRaw) ?? .resumeWhenPlaced }
+        set { quietModeBehaviorRaw = newValue.rawValue }
+    }
 
     var monitoringWindow: MonitoringWindow {
         MonitoringWindow(
@@ -65,6 +82,10 @@ final class SettingsStore {
         static let windowStart = "sg.windowStart"
         static let windowEnd = "sg.windowEnd"
         static let alarmTone = "sg.alarmTone"
+        static let handheldQuiet = "sg.handheldQuiet"
+        static let handheldHaptics = "sg.handheldHaptics"
+        static let resumeDelay = "sg.resumeDelay"
+        static let quietBehavior = "sg.quietBehavior"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -80,6 +101,10 @@ final class SettingsStore {
         windowStartMinutes = defaults.object(forKey: Keys.windowStart) as? Int ?? 8 * 60
         windowEndMinutes = defaults.object(forKey: Keys.windowEnd) as? Int ?? 22 * 60
         alarmToneRaw = defaults.string(forKey: Keys.alarmTone) ?? AlarmTone.classic.rawValue
+        handheldQuietEnabled = defaults.object(forKey: Keys.handheldQuiet) as? Bool ?? false
+        handheldQuietHapticsEnabled = defaults.object(forKey: Keys.handheldHaptics) as? Bool ?? false
+        resumeDelaySeconds = defaults.object(forKey: Keys.resumeDelay) as? Double ?? 2
+        quietModeBehaviorRaw = defaults.string(forKey: Keys.quietBehavior) ?? QuietModeBehavior.resumeWhenPlaced.rawValue
     }
 
     func apply(to parameters: inout DetectionParameters) {

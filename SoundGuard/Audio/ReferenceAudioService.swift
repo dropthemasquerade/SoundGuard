@@ -126,6 +126,33 @@ final class ReferenceAudioService {
         try? fileManager.removeItem(at: url)
     }
 
+    func replaceStoredFile(_ fileName: String, with source: URL) throws {
+        let dest = fileURL(for: fileName)
+        let temp = fileURL(for: fileName + ".editing")
+        let backup = fileURL(for: fileName + ".backup")
+        if fileManager.fileExists(atPath: temp.path) {
+            try fileManager.removeItem(at: temp)
+        }
+        try writeNormalizedCAF(from: source, to: temp)
+        if fileManager.fileExists(atPath: backup.path) {
+            try fileManager.removeItem(at: backup)
+        }
+        if fileManager.fileExists(atPath: dest.path) {
+            try fileManager.moveItem(at: dest, to: backup)
+        }
+        do {
+            try fileManager.moveItem(at: temp, to: dest)
+            if fileManager.fileExists(atPath: backup.path) {
+                try? fileManager.removeItem(at: backup)
+            }
+        } catch {
+            if fileManager.fileExists(atPath: backup.path), !fileManager.fileExists(atPath: dest.path) {
+                try? fileManager.moveItem(at: backup, to: dest)
+            }
+            throw error
+        }
+    }
+
     func preview(_ url: URL, onFinish: @escaping () -> Void) throws {
         cancelPreview()
         let player = try AVAudioPlayer(contentsOf: url)

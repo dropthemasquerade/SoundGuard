@@ -10,37 +10,35 @@ final class AlarmManager {
 
     var isActive: Bool { isAlarming }
 
-    func configure(volume: Double, hapticsEnabled: Bool, notificationsEnabled: Bool) {
-        audio.setVolume(volume)
-        haptics.setEnabled(hapticsEnabled)
-        notifications.setEnabled(notificationsEnabled)
-    }
-
     func prepareNotifications() {
         notifications.requestAuthorization()
     }
 
-    func start(snapshot: AlarmSnapshot, volume: Double, hapticsEnabled: Bool, notificationsEnabled: Bool, tone: AlarmTone) {
+    func start(snapshot: AlarmSnapshot, volume: Double, notificationsEnabled: Bool, tone: AlarmTone, output: AlertOutput) {
         guard !isAlarming else {
-            resumePlayback(volume: volume, hapticsEnabled: hapticsEnabled, tone: tone)
+            applyOutput(output, volume: volume, tone: tone)
             return
         }
         isAlarming = true
         activeID = snapshot.id
-        configure(volume: volume, hapticsEnabled: hapticsEnabled, notificationsEnabled: notificationsEnabled)
-        audio.startLooping(tone: tone)
-        haptics.startAlarmPattern()
+        notifications.setEnabled(notificationsEnabled)
         notifications.startRepeating(snapshot: snapshot)
+        applyOutput(output, volume: volume, tone: tone)
     }
 
-    /// Restarts alarm audio and haptics after the lock screen stalls them.
-    /// Does not schedule another set of notifications.
-    func resumePlayback(volume: Double, hapticsEnabled: Bool, tone: AlarmTone) {
+    /// Updates sound and haptics without dropping the event or its notifications.
+    func applyOutput(_ output: AlertOutput, volume: Double, tone: AlarmTone) {
         guard isAlarming else { return }
         audio.setVolume(volume)
-        haptics.setEnabled(hapticsEnabled)
-        audio.startLooping(tone: tone)
-        haptics.startAlarmPattern()
+        if output.playAudio {
+            audio.startLooping(tone: tone)
+        } else {
+            audio.stop()
+        }
+        haptics.setEnabled(output.playHaptics)
+        if output.playHaptics {
+            haptics.startAlarmPattern()
+        }
     }
 
     func stop() {

@@ -12,12 +12,15 @@ final class MonitoringCoordinator {
     private(set) var activeAlarm: AlarmSnapshot?
     private(set) var lastError: String?
     private(set) var hasActiveTarget = false
+    private(set) var quietPosture: QuietPosture = .off
+    private(set) var presentsAlarm = false
 
     private var machine = AppStateMachine()
     private let capture = AudioCaptureService()
     private let session = AudioSessionController()
     private let standby = StandbyAudioService()
     private let alarmManager = AlarmManager()
+    private let quietMode = HandheldQuietModeManager()
     private let matching = MatchingPipeline()
     private let events: EventStore
     private let settings: SettingsStore
@@ -33,6 +36,13 @@ final class MonitoringCoordinator {
         self.events = events
         self.settings = settings
         self.references = references
+        quietMode.onOutput = { [weak self] output in
+            guard let self else { return }
+            self.quietPosture = output.posture
+            self.presentsAlarm = output.showFullAlarm
+            guard self.phase == .alarming, self.alarmManager.isActive else { return }
+            self.alarmManager.applyOutput(output, volume: self.settings.alarmVolume, tone: self.settings.alarmTone)
+        }
         let pipeline = matching
         capture.onSamples = { [weak self] samples, time in
             pipeline.process(samples: samples, time: time) { result, level, confidence, clip in
@@ -179,13 +189,16 @@ final class MonitoringCoordinator {
 
     func handleSceneActive() {
         refreshSchedule()
+        quietMode.evaluateNow()
         guard phase == .alarming else { return }
         try? session.configureForPlayback()
-        alarmManager.resumePlayback(
-            volume: settings.alarmVolume,
-            hapticsEnabled: settings.hapticsEnabled,
-            tone: settings.alarmTone
-        )
+        alarmManager.applyOutput(quietMode.output, volume: settings.alarmVolume, tone: settings.alarmTone)
+    }
+
+    func refreshQuietMode() {
+        quietMode.refresh(settings: settings, phase: phase)
+        quietPosture = quietMode.output.posture
+        presentsAlarm = quietMode.output.showFullAlarm
     }
 
     /// Starts or stops the microphone when the armed window opens or closes.
@@ -245,6 +258,10 @@ final class MonitoringCoordinator {
             matching.resetSession()
             machine.handle(.resetCompleted).forEach(execute)
         }
+        if event == .stopTapped, machine.state.phase == .idle, machine.state.activeAlarm != nil {
+            matching.flushDetectionState()
+            machine.clearActiveAlarm()
+        }
         syncPublishedState()
     }
 
@@ -274,15 +291,17 @@ final class MonitoringCoordinator {
             standby.stop()
         case .startAlarm(let snapshot):
             // The mic session is already active. If iOS refuses a mode change, still play.
+            quietMode.refresh(settings: settings, phase: machine.state.phase)
             try? session.configureForPlayback()
             alarmManager.start(
                 snapshot: snapshot,
                 volume: settings.alarmVolume,
-                hapticsEnabled: settings.hapticsEnabled,
                 notificationsEnabled: settings.notificationsEnabled,
-                tone: settings.alarmTone
+                tone: settings.alarmTone,
+                output: quietMode.output
             )
         case .stopAlarm:
+            quietMode.userEndedAlarm()
             alarmManager.stop()
         case .persistDetection(let snapshot):
             try? events.insertDetection(snapshot)
@@ -339,6 +358,9 @@ final class MonitoringCoordinator {
         if let error = machine.state.lastError {
             lastError = error
         }
+        quietMode.refresh(settings: settings, phase: phase)
+        quietPosture = quietMode.output.posture
+        presentsAlarm = quietMode.output.showFullAlarm
         armBoundaryTimer()
     }
 

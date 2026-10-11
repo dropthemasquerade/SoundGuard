@@ -7,7 +7,7 @@ struct RootView: View {
     @State private var alarmEpoch = 0
 
     var body: some View {
-        let alarm = model.coordinator.phase.isAlarmSurface
+        let alarm = model.coordinator.presentsAlarm
         ZStack {
             TabView {
                 MonitorView()
@@ -34,7 +34,7 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active, model.coordinator.phase.isAlarmSurface {
+            if phase == .active, model.coordinator.presentsAlarm {
                 alarmEpoch += 1
             }
         }

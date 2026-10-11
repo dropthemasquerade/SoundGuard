@@ -6,9 +6,6 @@ struct SoundsView: View {
     @Environment(AppModel.self) private var model
     @State private var showRecord = false
     @State private var showImporter = false
-    @State private var importName = ""
-    @State private var pendingImport: URL?
-    @State private var importProfile: SoundProfile = .custom
     @State private var capturePreset: NotificationPreset?
 
     var body: some View {
@@ -46,13 +43,39 @@ struct SoundsView: View {
             }
             .padding(.horizontal, 20)
         }
-        .sheet(isPresented: $showRecord) {
+        .sheet(isPresented: $showRecord, onDismiss: { model.cancelRecording() }) {
             RecordSoundView()
                 .environment(model)
         }
-        .sheet(item: $capturePreset) { preset in
+        .sheet(item: $capturePreset, onDismiss: { model.cancelRecording() }) { preset in
             RecordSoundView(preset: preset)
                 .environment(model)
+        }
+        .sheet(
+            item: Binding(
+                get: { model.libraryDraft },
+                set: { draft in
+                    if draft == nil {
+                        model.discardLibraryDraft()
+                    } else {
+                        model.libraryDraft = draft
+                    }
+                }
+            ),
+            onDismiss: { model.discardLibraryDraft() }
+        ) { draft in
+            CaptureEditorView(
+                samples: draft.samples,
+                name: draft.name,
+                profile: draft.profile,
+                truncated: draft.truncated,
+                canRetake: false,
+                onCancel: { model.discardLibraryDraft() },
+                onSave: { name, profile, edit in
+                    model.saveLibraryDraft(name: name, profile: profile, edit: edit)
+                }
+            )
+            .environment(model)
         }
         .fileImporter(
             isPresented: $showImporter,
@@ -60,21 +83,8 @@ struct SoundsView: View {
             allowsMultipleSelection: false
         ) { result in
             if case .success(let urls) = result, let url = urls.first {
-                pendingImport = url
-                importName = url.deletingPathExtension().lastPathComponent
+                model.stageImport(from: url)
             }
-        }
-        .alert("IMPORT TARGET", isPresented: Binding(get: { pendingImport != nil }, set: { if !$0 { pendingImport = nil } })) {
-            TextField("Name", text: $importName)
-            Button("Save") {
-                if let pendingImport {
-                    model.importAudio(from: pendingImport, name: importName, profile: importProfile)
-                }
-                pendingImport = nil
-            }
-            Button("Cancel", role: .cancel) { pendingImport = nil }
-        } message: {
-            Text("The file is converted to 16 kHz mono and stored on device.")
         }
     }
 
@@ -171,6 +181,7 @@ struct SoundsView: View {
                         model.preview(sound)
                     }
                 }
+                Button("EDIT") { model.stageExisting(sound) }
                 Button("ARM THIS") { model.activate(sound) }
                 Spacer()
                 Button("DELETE", role: .destructive) { model.delete(sound) }

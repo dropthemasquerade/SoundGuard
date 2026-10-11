@@ -21,12 +21,15 @@ final class AppModel {
     var recordElapsed: TimeInterval = 0
     var previewingID: UUID?
     var previewingTone: AlarmTone?
+    var isPreviewingEdit = false
+    var capturedSamples: [Float]?
+    var capturedTruncated = false
+    var libraryDraft: AudioDraft?
 
     private var recordTimer: Timer?
     private var recordStartedAt: Date?
     private var recordURL: URL?
-    private var captureName: String?
-    private var captureProfile: SoundProfile?
+    private var capturedDisposableURL: URL?
 
     init(container: ModelContainer = PersistenceStack.makeContainer()) {
         self.container = container
@@ -67,6 +70,12 @@ final class AppModel {
 
     func resetAlarm() {
         coordinator.reset()
+        refresh()
+    }
+
+    /// Ends the alarm and leaves listening off so the target can be changed.
+    func stopAlarm() {
+        coordinator.stopListening()
         refresh()
     }
 
@@ -115,7 +124,22 @@ final class AppModel {
         references.stopPreview()
     }
 
-    private func play(url: URL, soundID: UUID?, tone: AlarmTone?) {
+    func previewEditedSamples(_ samples: [Float]) {
+        if isPreviewingEdit {
+            stopPreview()
+            return
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("soundguard-edit-preview.wav")
+        do {
+            try WaveFile.write(samples: samples, to: url)
+        } catch {
+            banner = error.localizedDescription
+            return
+        }
+        play(url: url, soundID: nil, tone: nil, editing: true)
+    }
+
+    private func play(url: URL, soundID: UUID?, tone: AlarmTone?, editing: Bool = false) {
         do {
             coordinator.beginPlaybackGuard()
             try coordinator.prepareForPreview()
@@ -126,10 +150,12 @@ final class AppModel {
             }
             previewingID = soundID
             previewingTone = tone
+            isPreviewingEdit = editing
         } catch {
             coordinator.cancelPlaybackGuard()
             previewingID = nil
             previewingTone = nil
+            isPreviewingEdit = false
             banner = AudioSessionController.message(for: error)
         }
     }
@@ -137,18 +163,16 @@ final class AppModel {
     private func completePreview() {
         previewingID = nil
         previewingTone = nil
+        isPreviewingEdit = false
         coordinator.endPlaybackGuard()
     }
 
-    func beginRecording(defaultName: String? = nil, defaultProfile: SoundProfile? = nil) {
-        captureName = defaultName
-        captureProfile = defaultProfile
+    func beginRecording() {
+        discardCapturedAudio()
         AVAudioApplication.requestRecordPermission { [weak self] granted in
             Task { @MainActor in
                 guard let self else { return }
                 guard granted else {
-                    self.captureName = nil
-                    self.captureProfile = nil
                     self.banner = "Microphone access is required to record a target."
                     return
                 }
@@ -177,15 +201,20 @@ final class AppModel {
         }
     }
 
-    func stopAndSaveRecording(name: String, profile: SoundProfile) {
+    func stopRecordingForEdit() {
+        guard isRecording else { return }
         recordTimer?.invalidate()
         recordTimer = nil
         isRecording = false
-        captureName = nil
-        captureProfile = nil
+        recordLevel = 0
         do {
             let url = try references.stopRecording()
-            try saveReference(from: url, name: name, profile: profile, cleanup: true)
+            do {
+                try stageCapturedFile(url)
+            } catch {
+                try? FileManager.default.removeItem(at: url)
+                throw error
+            }
         } catch {
             banner = error.localizedDescription
             references.cancelRecording()
@@ -196,18 +225,111 @@ final class AppModel {
         recordTimer?.invalidate()
         recordTimer = nil
         isRecording = false
-        captureName = nil
-        captureProfile = nil
         references.cancelRecording()
         recordURL = nil
+        discardCapturedAudio()
     }
 
-    func importAudio(from url: URL, name: String, profile: SoundProfile) {
+    func discardCapturedAudio() {
+        stopPreview()
+        if let url = capturedDisposableURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+        capturedDisposableURL = nil
+        capturedSamples = nil
+        capturedTruncated = false
+        recordElapsed = 0
+        recordLevel = 0
+    }
+
+    func stageImport(from url: URL) {
+        var copied: URL?
         do {
-            let copied = try references.importFile(url)
-            try saveReference(from: copied, name: name, profile: profile, cleanup: true)
+            let dest = try references.importFile(url)
+            copied = dest
+            let loaded = try AudioFeatureExtractor.loadEditorAudio(url: dest)
+            guard !loaded.samples.isEmpty else {
+                throw NSError(domain: "SoundGuard", code: 38, userInfo: [NSLocalizedDescriptionKey: "That audio file is empty"])
+            }
+            libraryDraft = AudioDraft(
+                samples: loaded.samples,
+                name: url.deletingPathExtension().lastPathComponent,
+                profile: .custom,
+                replacingID: nil,
+                disposableURL: dest,
+                truncated: loaded.truncated
+            )
+        } catch {
+            if let copied {
+                try? FileManager.default.removeItem(at: copied)
+            }
+            banner = error.localizedDescription
+        }
+    }
+
+    func stageExisting(_ sound: ReferenceSound) {
+        let url = references.fileURL(for: sound.fileName)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            banner = "This recording is no longer on the device."
+            return
+        }
+        do {
+            let loaded = try AudioFeatureExtractor.loadEditorAudio(url: url)
+            guard !loaded.samples.isEmpty else {
+                banner = "This recording is empty."
+                return
+            }
+            libraryDraft = AudioDraft(
+                samples: loaded.samples,
+                name: sound.name,
+                profile: sound.profile,
+                replacingID: sound.id,
+                disposableURL: nil,
+                truncated: loaded.truncated
+            )
         } catch {
             banner = error.localizedDescription
+        }
+    }
+
+    func discardLibraryDraft() {
+        stopPreview()
+        guard let draft = libraryDraft else { return }
+        if let url = draft.disposableURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+        libraryDraft = nil
+    }
+
+    @discardableResult
+    func saveCaptured(name: String, profile: SoundProfile, edit: CaptureEdit) -> Bool {
+        guard let samples = capturedSamples else { return false }
+        return commitEditedSamples(
+            samples,
+            name: name,
+            profile: profile,
+            edit: edit,
+            replacingID: nil,
+            disposableURL: capturedDisposableURL
+        ) {
+            self.capturedDisposableURL = nil
+            self.capturedSamples = nil
+            self.capturedTruncated = false
+        }
+    }
+
+    @discardableResult
+    func saveLibraryDraft(name: String, profile: SoundProfile, edit: CaptureEdit) -> Bool {
+        guard let draft = libraryDraft else { return false }
+        return commitEditedSamples(
+            draft.samples,
+            name: name,
+            profile: profile,
+            edit: edit,
+            replacingID: draft.replacingID,
+            disposableURL: draft.disposableURL
+        ) {
+            self.libraryDraft = nil
         }
     }
 
@@ -226,24 +348,83 @@ final class AppModel {
         coordinator.refreshSchedule()
     }
 
+    func applyQuietSettings() {
+        coordinator.refreshQuietMode()
+    }
+
     private func tickRecording() {
         recordLevel = references.currentMeter()
         if let recordStartedAt {
             recordElapsed = Date().timeIntervalSince(recordStartedAt)
             if recordElapsed >= 8 {
-                // Auto-stop at the maximum capture window.
-                recordTimer?.invalidate()
-                recordTimer = nil
-                isRecording = false
-                if let url = try? references.stopRecording() {
-                    let name = captureName ?? "Capture \(formattedClock())"
-                    let profile = captureProfile ?? .custom
-                    captureName = nil
-                    captureProfile = nil
-                    try? saveReference(from: url, name: name, profile: profile, cleanup: true)
-                }
+                stopRecordingForEdit()
             }
         }
+    }
+
+    private func stageCapturedFile(_ url: URL) throws {
+        let loaded = try AudioFeatureExtractor.loadEditorAudio(url: url)
+        guard !loaded.samples.isEmpty else {
+            try? FileManager.default.removeItem(at: url)
+            throw NSError(domain: "SoundGuard", code: 38, userInfo: [NSLocalizedDescriptionKey: "That recording is empty"])
+        }
+        capturedDisposableURL = url
+        capturedTruncated = loaded.truncated
+        capturedSamples = loaded.samples
+    }
+
+    private func commitEditedSamples(
+        _ samples: [Float],
+        name: String,
+        profile: SoundProfile,
+        edit: CaptureEdit,
+        replacingID: UUID?,
+        disposableURL: URL?,
+        clear: () -> Void
+    ) -> Bool {
+        if let message = CaptureProcessor.limitMessage(start: edit.start, end: edit.end) {
+            banner = message
+            return false
+        }
+        let processed = CaptureProcessor.process(samples, edit: edit)
+        let length = CaptureProcessor.duration(of: processed)
+        guard length + 0.000_1 >= CaptureProcessor.minimumDuration, length - 0.000_1 <= CaptureProcessor.maximumDuration else {
+            banner = "Keep at least 0.25 seconds and at most 12 seconds."
+            return false
+        }
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("soundguard-edited-\(UUID().uuidString).wav")
+        do {
+            stopPreview()
+            try WaveFile.write(samples: processed, to: temp)
+            if let replacingID {
+                try replaceReference(id: replacingID, from: temp, name: name, profile: profile)
+                try? FileManager.default.removeItem(at: temp)
+            } else {
+                try saveReference(from: temp, name: name, profile: profile, cleanup: true)
+            }
+            if let disposableURL {
+                try? FileManager.default.removeItem(at: disposableURL)
+            }
+            clear()
+            return true
+        } catch {
+            try? FileManager.default.removeItem(at: temp)
+            banner = error.localizedDescription
+            return false
+        }
+    }
+
+    private func replaceReference(id: UUID, from url: URL, name: String, profile: SoundProfile) throws {
+        guard let sound = sounds.first(where: { $0.id == id }) else {
+            throw NSError(domain: "SoundGuard", code: 37, userInfo: [NSLocalizedDescriptionKey: "That target no longer exists"])
+        }
+        let (template, duration) = try references.buildTemplate(from: url, profile: profile)
+        let data = try references.encode(template)
+        try references.replaceStoredFile(sound.fileName, with: url)
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let label = trimmed.isEmpty ? sound.name : trimmed
+        try events.updateSound(id: id, name: label, duration: duration, profile: profile, templateData: data)
+        refresh()
     }
 
     private func saveReference(from url: URL, name: String, profile: SoundProfile, cleanup: Bool, makeActive: Bool = true) throws {
@@ -267,9 +448,14 @@ final class AppModel {
         refresh()
     }
 
-    private func formattedClock() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        return formatter.string(from: Date())
-    }
+}
+
+struct AudioDraft: Identifiable {
+    let id = UUID()
+    var samples: [Float]
+    var name: String
+    var profile: SoundProfile
+    var replacingID: UUID?
+    var disposableURL: URL?
+    var truncated: Bool
 }

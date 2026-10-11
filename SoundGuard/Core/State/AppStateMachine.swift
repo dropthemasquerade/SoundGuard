@@ -52,6 +52,10 @@ struct AppStateMachine {
         state.lastError = nil
     }
 
+    mutating func clearActiveAlarm() {
+        state.activeAlarm = nil
+    }
+
     @discardableResult
     mutating func handle(_ event: AppEvent) -> [AppCommand] {
         switch (state.phase, event) {
@@ -80,6 +84,16 @@ struct AppStateMachine {
         case (.monitoring, .stopTapped), (.interrupted, .stopTapped), (.outsideWindow, .stopTapped):
             state.phase = .idle
             return [.leaveStandby, .stopCapture]
+
+        case (.alarming, .stopTapped):
+            // Stay disarmed. Reset would listen again and the sound still in the room
+            // would latch another alarm before the user can change the target.
+            state.phase = .idle
+            return [.stopAlarm, .persistAcknowledgement, .persistReset, .leaveStandby, .stopCapture]
+
+        case (.acknowledged, .stopTapped):
+            state.phase = .idle
+            return [.stopAlarm, .persistReset, .leaveStandby, .stopCapture]
 
         case (.monitoring, .windowClosed):
             state.phase = .outsideWindow

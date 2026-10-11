@@ -7,6 +7,8 @@ struct RecordSoundView: View {
     private let instruction: String?
     @State private var name: String
     @State private var profile: SoundProfile
+    @State private var pinnedSamples: [Float]?
+    @State private var pinnedTruncated = false
 
     init(preset: NotificationPreset? = nil) {
         instruction = preset?.instruction
@@ -15,13 +17,52 @@ struct RecordSoundView: View {
     }
 
     var body: some View {
+        if let samples = pinnedSamples ?? model.capturedSamples {
+            CaptureEditorView(
+                samples: samples,
+                name: name,
+                profile: profile,
+                truncated: pinnedSamples == nil ? model.capturedTruncated : pinnedTruncated,
+                canRetake: true,
+                onCancel: {
+                    pinnedSamples = nil
+                    model.cancelRecording()
+                    dismiss()
+                },
+                onRetake: { editedName, editedProfile in
+                    name = editedName
+                    profile = editedProfile
+                    pinnedSamples = nil
+                    model.discardCapturedAudio()
+                },
+                onSave: { editedName, editedProfile, edit in
+                    if model.saveCaptured(name: editedName, profile: editedProfile, edit: edit) {
+                        dismiss()
+                    }
+                }
+            )
+            .onAppear {
+                if pinnedSamples == nil, let live = model.capturedSamples {
+                    pinnedSamples = live
+                    pinnedTruncated = model.capturedTruncated
+                }
+            }
+        } else {
+            recordBody
+        }
+    }
+
+    private var recordBody: some View {
         ZStack {
             NeonBackground(pulse: model.isRecording)
             VStack(spacing: 20) {
                 HStack {
-                    Button("CLOSE") { model.cancelRecording(); dismiss() }
-                        .font(SGTheme.micro)
-                        .foregroundStyle(SGTheme.dim)
+                    Button("CLOSE") {
+                        model.cancelRecording()
+                        dismiss()
+                    }
+                    .font(SGTheme.micro)
+                    .foregroundStyle(SGTheme.dim)
                     Spacer()
                     Text("CAPTURE")
                         .font(.system(size: 16, weight: .heavy, design: .monospaced))
@@ -72,17 +113,16 @@ struct RecordSoundView: View {
                 }
                 .onTapGesture {
                     if model.isRecording {
-                        model.stopAndSaveRecording(name: name, profile: profile)
-                        dismiss()
+                        model.stopRecordingForEdit()
                     } else {
-                        model.beginRecording(defaultName: name, defaultProfile: profile)
+                        model.beginRecording()
                     }
                 }
 
                 LevelMeterView(level: model.recordLevel, color: SGTheme.red)
                     .padding(.horizontal, 12)
 
-                Text(model.isRecording ? "TAP TO STOP AND SAVE  ·  MAX 8s" : "TAP THE RING TO START  ·  0.3–8s")
+                Text(model.isRecording ? "TAP TO STOP  ·  THEN CROP" : "TAP THE RING TO START  ·  0.3–8s")
                     .font(SGTheme.micro)
                     .foregroundStyle(SGTheme.dim)
 

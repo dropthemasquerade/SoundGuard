@@ -122,10 +122,11 @@ struct MonitorView: View {
             }
             return "SYSTEM STANDBY"
         case .monitoring:
+            let mode = model.settings.listenMode.title
             if model.settings.scheduleEnabled {
-                return "LIVE MATCHING · \(model.settings.monitoringWindow.label)"
+                return "LIVE \(mode) · \(model.settings.monitoringWindow.label)"
             }
-            return "LIVE MATCHING  ·  16 kHz MONO"
+            return "LIVE \(mode) · 16 kHz MONO"
         case .outsideWindow:
             return "ARMED · OUTSIDE \(model.settings.monitoringWindow.label)"
         case .interrupted: return "AUDIO SESSION INTERRUPTED"

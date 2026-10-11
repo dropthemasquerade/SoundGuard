@@ -5,6 +5,8 @@ import Foundation
 final class AudioFeatureExtractor {
     private let fft = FFTProcessor()
     private let mel = MelFilterBank()
+    /// Live frames measure overtones at the loaded target's fundamental.
+    var harmonicHz: Float = 0
     private var pending: [Float] = []
     private var rawHistory: [Float] = []
     private var totalReceived = 0
@@ -54,13 +56,17 @@ final class AudioFeatureExtractor {
         let mean = meanVector(mfccs)
         let duration = Double(samples.count) / AudioDSP.sampleRate
         let identity = pitchIdentity(of: chosen)
+        let harmonic = HarmonicProfile.fingerprint(samples: samples)
         return ReferenceTemplate(
             frames: mfccs,
             mean: mean,
             duration: duration,
             profile: profile,
             pitchHz: identity.hz,
-            pitched: identity.pitched
+            pitched: identity.pitched,
+            partials: harmonic.partials,
+            harmonicHz: harmonic.hz,
+            harmonicity: harmonic.harmonicity
         )
     }
 
@@ -108,12 +114,15 @@ final class AudioFeatureExtractor {
         let logMel = mel.logMel(power: power)
         let mfcc = MFCC.dct(logMel)
         let pitch = PitchEstimator.estimate(pitchWindow)
+        let harmonic = HarmonicProfile.measure(power: power, fundamentalHz: harmonicHz)
         return AudioFrameFeatures(
             mfcc: mfcc,
             energy: energy,
             timestamp: timestamp,
             pitchHz: pitch.hz,
-            pitchConfidence: pitch.confidence
+            pitchConfidence: pitch.confidence,
+            harmonicity: harmonic.harmonicity,
+            partials: harmonic.partials
         )
     }
 

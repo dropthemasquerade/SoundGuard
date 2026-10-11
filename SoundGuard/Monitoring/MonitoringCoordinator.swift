@@ -98,7 +98,8 @@ final class MonitoringCoordinator {
         matching.load(
             template: template,
             threshold: settings.similarityThreshold,
-            consecutiveHits: settings.consecutiveHits
+            consecutiveHits: settings.consecutiveHits,
+            mode: settings.listenMode
         )
         hasActiveTarget = true
     }
@@ -424,17 +425,24 @@ final class MatchingPipeline: @unchecked Sendable {
     private let detection = DetectionEngine()
     private let queue = DispatchQueue(label: "soundguard.dsp", qos: .userInitiated)
     private var lastLevel: Float = 0
+    private var listenMode: ListenMode = .sustained
     /// Last few seconds of microphone audio, copied only when a detection latches.
     private var recent: [Float] = []
     private let recentLimit = 16_000 * 5
 
-    func load(template: ReferenceTemplate, threshold: Double, consecutiveHits: Int) {
+    func load(template: ReferenceTemplate, threshold: Double, consecutiveHits: Int, mode: ListenMode) {
         queue.sync {
+            listenMode = mode
             matcher.load(template)
+            extractor.harmonicHz = template.harmonicHz
             var parameters = DetectionParameters.default(for: template.profile)
             parameters.similarityThreshold = Float(threshold)
             parameters.consecutiveHits = max(2, consecutiveHits)
             detection.parameters = parameters
+            detection.mode = mode
+            detection.referenceDuration = template.duration
+            detection.templatePartials = template.partials
+            detection.templateHarmonicity = template.harmonicity
             detection.resetLatch()
             detection.resetSession()
             extractor.reset()
@@ -444,6 +452,7 @@ final class MatchingPipeline: @unchecked Sendable {
     func clearTarget() {
         queue.sync {
             matcher.clear()
+            extractor.harmonicHz = 0
             extractor.reset()
             detection.resetLatch()
         }
@@ -502,7 +511,8 @@ final class MatchingPipeline: @unchecked Sendable {
             var energy: Float = PCMConvert.rms(samples)
             for frame in frames {
                 let score = matcher.score(frame: frame)
-                confidence = max(confidence, score.similarity)
+                let shown = listenMode == .harmonic ? max(score.similarity, score.partialMatch) : score.similarity
+                confidence = max(confidence, shown)
                 energy = max(energy, score.energy)
                 if result == nil {
                     result = detection.process(score)

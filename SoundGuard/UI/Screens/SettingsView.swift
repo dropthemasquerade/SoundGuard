@@ -16,6 +16,40 @@ struct SettingsView: View {
                         .padding(.top, 18)
 
                     panel("MATCHING") {
+                        Text("LISTEN MODE")
+                            .font(SGTheme.micro)
+                            .foregroundStyle(SGTheme.dim)
+                        ForEach(ListenMode.allCases) { mode in
+                            Button {
+                                settings.listenMode = mode
+                                model.applyDetectionSettings()
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(mode.title)
+                                            .font(SGTheme.micro)
+                                            .foregroundStyle(settings.listenMode == mode ? SGTheme.cyan : SGTheme.text)
+                                        Text(mode.detail)
+                                            .font(SGTheme.micro)
+                                            .foregroundStyle(SGTheme.dim)
+                                    }
+                                    Spacer()
+                                    if settings.listenMode == mode {
+                                        Text("ON")
+                                            .font(SGTheme.micro)
+                                            .foregroundStyle(SGTheme.bg)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(SGTheme.cyan, in: Capsule())
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Text("SINGLE is for a sound that happens once. It must match closely, then stop. A repeating similar sound and steady noise stay quiet. HARMONIC collects the target's overtones and uses that same one-sound rule, so the wrong stack does not alarm. Just after you arm, those two modes wait to see that the sound does not repeat. After the room has been quiet, they alarm shortly after it ends. Crop the reference to the one sound you want. HARMONIC needs a tone. SUSTAINED is the earlier streak match.")
+                            .font(SGTheme.micro)
+                            .foregroundStyle(SGTheme.dim)
+                            .fixedSize(horizontal: false, vertical: true)
                         labeled("SIMILARITY  \(Int(settings.similarityThreshold * 100))%") {
                             Slider(value: $settings.similarityThreshold, in: 0.62...0.94, step: 0.01)
                                 .tint(SGTheme.cyan)
@@ -23,11 +57,23 @@ struct SettingsView: View {
                                     model.applyDetectionSettings()
                                 }
                         }
-                        labeled("CONSECUTIVE HITS  \(settings.consecutiveHits)") {
-                            Stepper("", value: $settings.consecutiveHits, in: 2...8)
-                                .onChange(of: settings.consecutiveHits) { _, _ in
-                                    model.applyDetectionSettings()
-                                }
+                        if settings.listenMode == .sustained {
+                            labeled("CONSECUTIVE HITS  \(settings.consecutiveHits)") {
+                                Stepper("", value: $settings.consecutiveHits, in: 2...8)
+                                    .onChange(of: settings.consecutiveHits) { _, _ in
+                                        model.applyDetectionSettings()
+                                    }
+                            }
+                        } else if settings.listenMode == .single {
+                            Text("SINGLE STAYS AT OR ABOVE 86%, EVEN IF THE SLIDER IS LOWER.")
+                                .font(SGTheme.micro)
+                                .foregroundStyle(SGTheme.dim)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            Text("HARMONIC MATCHES THE OVERTONE MIX. THE SIMILARITY SLIDER DOES NOT GATE IT.")
+                                .font(SGTheme.micro)
+                                .foregroundStyle(SGTheme.dim)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
 

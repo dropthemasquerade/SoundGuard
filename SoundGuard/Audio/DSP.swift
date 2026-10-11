@@ -355,3 +355,201 @@ enum PCMConvert {
         return prev
     }
 }
+
+enum HarmonicProfile {
+    static let partialCount = 8
+
+    /// Partials are sum-normalized. `harmonicity` is harmonic energy over the band above 80 Hz.
+    static func measure(
+        power: [Float],
+        fundamentalHz: Float,
+        sampleRate: Double = AudioDSP.sampleRate,
+        fftSize: Int = AudioDSP.fftSize
+    ) -> (partials: [Float], harmonicity: Float) {
+        let empty = [Float](repeating: 0, count: partialCount)
+        guard fundamentalHz >= 70, fundamentalHz < Float(sampleRate) * 0.45, !power.isEmpty else {
+            return (empty, 0)
+        }
+        let binHz = Float(sampleRate) / Float(fftSize)
+        var partials = [Float](repeating: 0, count: partialCount)
+        var harmonicEnergy: Float = 0
+        for index in 1...partialCount {
+            let hz = fundamentalHz * Float(index)
+            if hz >= Float(sampleRate) / 2 - binHz { break }
+            let energy = binEnergy(power, hz: hz, binHz: binHz)
+            partials[index - 1] = energy
+            harmonicEnergy += energy
+        }
+        let startBin = max(1, Int((80 / binHz).rounded(.down)))
+        var total: Float = 0
+        if startBin < power.count {
+            power.withUnsafeBufferPointer { buffer in
+                guard let base = buffer.baseAddress else { return }
+                vDSP_sve(base + startBin, 1, &total, vDSP_Length(power.count - startBin))
+            }
+        }
+        let harmonicity = total > 1e-12 ? min(1, harmonicEnergy / total) : 0
+        normalizeSum(&partials)
+        return (partials, harmonicity)
+    }
+
+    /// 1 when the overtone mix matches. Extra or missing partials pull the score down.
+    static func shapeScore(_ live: [Float], _ reference: [Float]) -> Float {
+        let count = min(live.count, reference.count)
+        guard count > 0 else { return 0 }
+        var liveSum: Float = 0
+        var referenceSum: Float = 0
+        for index in 0..<count {
+            liveSum += max(0, live[index])
+            referenceSum += max(0, reference[index])
+        }
+        guard liveSum > 1e-8, referenceSum > 1e-8 else { return 0 }
+        var distance: Float = 0
+        for index in 0..<count {
+            distance += abs(live[index] / liveSum - reference[index] / referenceSum)
+        }
+        return max(0, min(1, 1 - 0.5 * distance))
+    }
+
+    /// Overtones of a tonal reference, measured the same way live frames are (pre-emphasized spectrum).
+    static func fingerprint(samples: [Float]) -> (hz: Float, partials: [Float], harmonicity: Float) {
+        let empty = (hz: Float(0), partials: [Float](), harmonicity: Float(0))
+        guard samples.count >= AudioDSP.frameLength + 800 else { return empty }
+        var emphasized = samples
+        _ = PCMConvert.preEmphasis(&emphasized, previous: 0)
+        let fft = FFTProcessor()
+        let frameLength = AudioDSP.frameLength
+        let hop = AudioDSP.hopLength
+
+        var peakRMS: Float = 0
+        var rmsAt = [Float]()
+        var ends = [Int]()
+        var end = frameLength
+        while end <= emphasized.count {
+            let frame = Array(emphasized[(end - frameLength)..<end])
+            let rms = PCMConvert.rms(frame)
+            rmsAt.append(rms)
+            ends.append(end)
+            peakRMS = max(peakRMS, rms)
+            end += hop
+        }
+        let floor = max(8e-4, peakRMS * 0.25)
+        var pitches: [Float] = []
+        var energetic: [Int] = []
+        for (index, frameEnd) in ends.enumerated() where rmsAt[index] >= floor {
+            energetic.append(index)
+            let pitchStart = max(0, frameEnd - 2048)
+            let pitch = PitchEstimator.estimate(Array(samples[pitchStart..<frameEnd]))
+            if pitch.hz > 1, pitch.confidence >= 0.55 {
+                pitches.append(pitch.hz)
+            }
+        }
+        guard !energetic.isEmpty else { return empty }
+
+        var fundamental = stableFundamental(pitches, energeticCount: energetic.count)
+        if fundamental <= 1 {
+            var accum = [Float](repeating: 0, count: fft.binCount)
+            var used = 0
+            for index in energetic {
+                let frameEnd = ends[index]
+                let frame = Array(emphasized[(frameEnd - frameLength)..<frameEnd])
+                let power = frame.withUnsafeBufferPointer { fft.powerSpectrum(frame: $0.baseAddress!, count: $0.count) }
+                let n = min(accum.count, power.count)
+                vDSP_vadd(accum, 1, power, 1, &accum, 1, vDSP_Length(n))
+                used += 1
+            }
+            guard used > 0 else { return empty }
+            var scale = 1 / Float(used)
+            vDSP_vsmul(accum, 1, &scale, &accum, 1, vDSP_Length(accum.count))
+            let searched = dominantFundamental(accum)
+            guard searched.harmonicity >= 0.36 else { return empty }
+            fundamental = searched.hz
+        }
+
+        var partialAccum = [Float](repeating: 0, count: partialCount)
+        var harmonicities: [Float] = []
+        var used = 0
+        for index in energetic {
+            let frameEnd = ends[index]
+            let frame = Array(emphasized[(frameEnd - frameLength)..<frameEnd])
+            let power = frame.withUnsafeBufferPointer { fft.powerSpectrum(frame: $0.baseAddress!, count: $0.count) }
+            let measured = measure(power: power, fundamentalHz: fundamental)
+            if measured.harmonicity < 0.12 { continue }
+            vDSP_vadd(partialAccum, 1, measured.partials, 1, &partialAccum, 1, vDSP_Length(partialCount))
+            harmonicities.append(measured.harmonicity)
+            used += 1
+        }
+        guard used >= 3 else { return empty }
+        var scale = 1 / Float(used)
+        vDSP_vsmul(partialAccum, 1, &scale, &partialAccum, 1, vDSP_Length(partialCount))
+        normalizeSum(&partialAccum)
+        let harmonicity = median(harmonicities)
+        guard harmonicity >= 0.22 else { return empty }
+        return (fundamental, partialAccum, harmonicity)
+    }
+
+    private static func stableFundamental(_ pitches: [Float], energeticCount: Int) -> Float {
+        guard pitches.count >= 4, Double(pitches.count) >= 0.4 * Double(max(energeticCount, 1)) else { return 0 }
+        let center = median(pitches)
+        let spread = median(pitches.map { PitchMatch.semitoneDistance($0, center) })
+        guard spread < 0.6 else { return 0 }
+        return center
+    }
+
+    private static func dominantFundamental(_ power: [Float]) -> (hz: Float, harmonicity: Float) {
+        let binHz = Float(AudioDSP.sampleRate) / Float(AudioDSP.fftSize)
+        let low = max(1, Int((80 / binHz).rounded(.down)))
+        let high = min(power.count - 1, Int((1600 / binHz).rounded(.down)))
+        guard high > low else { return (0, 0) }
+        var peakBin = low
+        var peak: Float = 0
+        for index in low...high where power[index] > peak {
+            peak = power[index]
+            peakBin = index
+        }
+        let peakHz = Float(peakBin) * binHz
+        var bestHz: Float = 0
+        var bestHarmonicity: Float = 0
+        for divisor in 1...5 {
+            let hz = peakHz / Float(divisor)
+            guard hz >= 70, hz <= 2000 else { continue }
+            let measured = measure(power: power, fundamentalHz: hz)
+            if measured.harmonicity > bestHarmonicity {
+                bestHarmonicity = measured.harmonicity
+                bestHz = hz
+            }
+        }
+        return (bestHz, bestHarmonicity)
+    }
+
+    private static func binEnergy(_ power: [Float], hz: Float, binHz: Float) -> Float {
+        let center = hz / binHz
+        let left = Int(floor(center - 0.75))
+        let right = Int(ceil(center + 0.75))
+        var sum: Float = 0
+        if left > right { return 0 }
+        for index in left...right where index >= 0 && index < power.count {
+            let weight = max(0, 1 - abs(Float(index) - center) / 1.25)
+            sum += power[index] * weight
+        }
+        return sum
+    }
+
+    private static func normalizeSum(_ values: inout [Float]) {
+        let sum = values.reduce(0, +)
+        guard sum > 1e-12 else { return }
+        for index in 0..<values.count {
+            values[index] /= sum
+        }
+    }
+
+    private static func median(_ values: [Float]) -> Float {
+        guard !values.isEmpty else { return 0 }
+        let sorted = values.sorted()
+        let middle = sorted.count / 2
+        if sorted.count.isMultiple(of: 2) {
+            return 0.5 * (sorted[middle - 1] + sorted[middle])
+        }
+        return sorted[middle]
+    }
+}

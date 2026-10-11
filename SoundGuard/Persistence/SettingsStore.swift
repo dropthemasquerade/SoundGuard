@@ -10,6 +10,9 @@ final class SettingsStore {
     var consecutiveHits: Int {
         didSet { defaults.set(consecutiveHits, forKey: Keys.hits) }
     }
+    var listenModeRaw: String {
+        didSet { defaults.set(listenModeRaw, forKey: Keys.listenMode) }
+    }
     var resumeAfterReset: Bool {
         didSet { defaults.set(resumeAfterReset, forKey: Keys.resumeReset) }
     }
@@ -60,6 +63,11 @@ final class SettingsStore {
         set { quietModeBehaviorRaw = newValue.rawValue }
     }
 
+    var listenMode: ListenMode {
+        get { ListenMode(rawValue: listenModeRaw) ?? .sustained }
+        set { listenModeRaw = newValue.rawValue }
+    }
+
     var monitoringWindow: MonitoringWindow {
         MonitoringWindow(
             enabled: scheduleEnabled,
@@ -73,6 +81,7 @@ final class SettingsStore {
     private enum Keys {
         static let threshold = "sg.threshold"
         static let hits = "sg.hits"
+        static let listenMode = "sg.listenMode"
         static let resumeReset = "sg.resumeReset"
         static let resumeInterrupt = "sg.resumeInterrupt"
         static let haptics = "sg.haptics"
@@ -92,6 +101,7 @@ final class SettingsStore {
         self.defaults = defaults
         similarityThreshold = defaults.object(forKey: Keys.threshold) as? Double ?? 0.78
         consecutiveHits = defaults.object(forKey: Keys.hits) as? Int ?? 4
+        listenModeRaw = defaults.string(forKey: Keys.listenMode) ?? ListenMode.sustained.rawValue
         resumeAfterReset = defaults.object(forKey: Keys.resumeReset) as? Bool ?? true
         resumeAfterInterrupt = defaults.object(forKey: Keys.resumeInterrupt) as? Bool ?? true
         hapticsEnabled = defaults.object(forKey: Keys.haptics) as? Bool ?? true

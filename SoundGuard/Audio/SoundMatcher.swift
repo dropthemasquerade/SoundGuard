@@ -27,10 +27,11 @@ final class SoundMatcher {
         }
 
         guard let template, !template.frames.isEmpty else {
-            return MatchScore(similarity: 0, energy: frame.energy, timestamp: frame.timestamp)
+            return MatchScore(similarity: 0, energy: frame.energy, timestamp: frame.timestamp, harmonicity: frame.harmonicity, partials: frame.partials)
         }
 
         let timbre = MFCC.cosine(normalized, template.mean)
+        let partialMatch = HarmonicProfile.shapeScore(frame.partials, template.partials)
         if template.pitched {
             let similarity = PitchMatch.score(
                 pitchHz: frame.pitchHz,
@@ -38,11 +39,22 @@ final class SoundMatcher {
                 referenceHz: template.pitchHz,
                 timbre: timbre
             )
-            return MatchScore(similarity: similarity, energy: frame.energy, timestamp: frame.timestamp)
+            return scored(similarity, frame: frame, partialMatch: partialMatch)
         }
         let windowScore = slidingWindowScore(template.frames)
         let similarity = max(0, 0.75 * windowScore + 0.25 * max(0, timbre))
-        return MatchScore(similarity: similarity, energy: frame.energy, timestamp: frame.timestamp)
+        return scored(similarity, frame: frame, partialMatch: partialMatch)
+    }
+
+    private func scored(_ similarity: Float, frame: AudioFrameFeatures, partialMatch: Float) -> MatchScore {
+        MatchScore(
+            similarity: similarity,
+            energy: frame.energy,
+            timestamp: frame.timestamp,
+            harmonicity: frame.harmonicity,
+            partials: frame.partials,
+            partialMatch: partialMatch
+        )
     }
 
     static func similarity(between a: ReferenceTemplate, and b: ReferenceTemplate) -> Float {

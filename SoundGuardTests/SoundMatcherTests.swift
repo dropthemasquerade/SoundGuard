@@ -72,6 +72,33 @@ final class SoundMatcherTests: XCTestCase {
         XCTAssertLessThan(SoundMatcher.similarity(between: c4, and: c5), 0.55)
     }
 
+    func testSineFingerprintIsAFundamental() {
+        let profile = HarmonicProfile.fingerprint(samples: sine(freq: 880, seconds: 0.8))
+        XCTAssertFalse(profile.partials.isEmpty)
+        XCTAssertEqual(profile.hz, 880, accuracy: 40)
+        XCTAssertGreaterThan(profile.partials[0], 0.55)
+        XCTAssertGreaterThan(profile.harmonicity, 0.35)
+    }
+
+    func testRichToneFingerprintDiffersFromASine() {
+        let pure = HarmonicProfile.fingerprint(samples: sine(freq: 440, seconds: 0.8))
+        let rich = HarmonicProfile.fingerprint(samples: richTone(freq: 440, seconds: 0.8))
+        XCTAssertGreaterThan(HarmonicProfile.shapeScore(rich.partials, rich.partials), 0.95)
+        XCTAssertLessThan(HarmonicProfile.shapeScore(pure.partials, rich.partials), 0.72)
+    }
+
+    func testNoiseHasNoHarmonicFingerprint() {
+        var noise = [Float](repeating: 0, count: 16_000)
+        var state: UInt64 = 0x123456789
+        for index in 0..<noise.count {
+            state = state &* 6364136223846793005 &+ 1
+            let unit = Float(state % 10_000) / 10_000
+            noise[index] = unit * 0.4 - 0.2
+        }
+        let profile = HarmonicProfile.fingerprint(samples: noise)
+        XCTAssertTrue(profile.partials.isEmpty)
+    }
+
     func testLivePianoNoteRejectsItsNeighbor() {
         let extractor = AudioFeatureExtractor()
         let template = extractor.extractTemplate(from: piano(midi: 60, seconds: 1.0), profile: .beep)
@@ -112,6 +139,20 @@ final class SoundMatcherTests: XCTestCase {
                 sample += exp(-Double(harmonic) * brightness) * sin(2 * Double.pi * partial * time)
             }
             return Float(sample * envelope * 0.2)
+        }
+    }
+
+    private func richTone(freq: Double, seconds: Double) -> [Float] {
+        let sampleRate = AudioDSP.sampleRate
+        let count = Int(seconds * sampleRate)
+        let weights = [1.0, 0.72, 0.5, 0.34, 0.22, 0.14]
+        return (0..<count).map { index in
+            let time = Double(index) / sampleRate
+            var sample = 0.0
+            for (harmonic, weight) in weights.enumerated() {
+                sample += weight * sin(2 * Double.pi * freq * Double(harmonic + 1) * time)
+            }
+            return Float(sample * 0.12)
         }
     }
 

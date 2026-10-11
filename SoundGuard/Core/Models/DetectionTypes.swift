@@ -1,11 +1,37 @@
 import Foundation
 
+enum ListenMode: String, Codable, CaseIterable, Identifiable {
+    case sustained
+    case single
+    case harmonic
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .sustained: return "SUSTAINED"
+        case .single: return "SINGLE"
+        case .harmonic: return "HARMONIC"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .sustained: return "A run of similar frames can alarm"
+        case .single: return "One precise sound. Repeats and steady noise stay quiet"
+        case .harmonic: return "Collect the target overtones, once. The wrong stack stays quiet"
+        }
+    }
+}
+
 struct AudioFrameFeatures {
     var mfcc: [Float]
     var energy: Float
     var timestamp: TimeInterval
     var pitchHz: Float
     var pitchConfidence: Float
+    var harmonicity: Float
+    var partials: [Float]
 }
 
 struct ReferenceTemplate: Codable, Equatable {
@@ -16,9 +42,15 @@ struct ReferenceTemplate: Codable, Equatable {
     /// Median fundamental of a stable tone. Zero when the reference is unpitched.
     var pitchHz: Float
     var pitched: Bool
+    /// Sum-normalized strengths of partials 1...8. Empty when the reference is not tonal.
+    var partials: [Float]
+    /// Fundamental used to measure `partials`. May match `pitchHz`.
+    var harmonicHz: Float
+    /// Share of the spectrum explained by those partials.
+    var harmonicity: Float
     var featureVersion: Int
 
-    static let currentFeatureVersion = 2
+    static let currentFeatureVersion = 3
 
     init(
         frames: [[Float]],
@@ -27,6 +59,9 @@ struct ReferenceTemplate: Codable, Equatable {
         profile: SoundProfile,
         pitchHz: Float = 0,
         pitched: Bool = false,
+        partials: [Float] = [],
+        harmonicHz: Float = 0,
+        harmonicity: Float = 0,
         featureVersion: Int = currentFeatureVersion
     ) {
         self.frames = frames
@@ -35,11 +70,14 @@ struct ReferenceTemplate: Codable, Equatable {
         self.profile = profile
         self.pitchHz = pitchHz
         self.pitched = pitched
+        self.partials = partials
+        self.harmonicHz = harmonicHz
+        self.harmonicity = harmonicity
         self.featureVersion = featureVersion
     }
 
     private enum CodingKeys: String, CodingKey {
-        case frames, mean, duration, profile, pitchHz, pitched, featureVersion
+        case frames, mean, duration, profile, pitchHz, pitched, partials, harmonicHz, harmonicity, featureVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -50,6 +88,9 @@ struct ReferenceTemplate: Codable, Equatable {
         profile = try container.decode(SoundProfile.self, forKey: .profile)
         pitchHz = try container.decodeIfPresent(Float.self, forKey: .pitchHz) ?? 0
         pitched = try container.decodeIfPresent(Bool.self, forKey: .pitched) ?? false
+        partials = try container.decodeIfPresent([Float].self, forKey: .partials) ?? []
+        harmonicHz = try container.decodeIfPresent(Float.self, forKey: .harmonicHz) ?? 0
+        harmonicity = try container.decodeIfPresent(Float.self, forKey: .harmonicity) ?? 0
         featureVersion = try container.decodeIfPresent(Int.self, forKey: .featureVersion) ?? 1
     }
 
@@ -61,6 +102,9 @@ struct ReferenceTemplate: Codable, Equatable {
         try container.encode(profile, forKey: .profile)
         try container.encode(pitchHz, forKey: .pitchHz)
         try container.encode(pitched, forKey: .pitched)
+        try container.encode(partials, forKey: .partials)
+        try container.encode(harmonicHz, forKey: .harmonicHz)
+        try container.encode(harmonicity, forKey: .harmonicity)
         try container.encode(featureVersion, forKey: .featureVersion)
     }
 }
@@ -69,6 +113,9 @@ struct MatchScore {
     var similarity: Float
     var energy: Float
     var timestamp: TimeInterval
+    var harmonicity: Float = 0
+    var partials: [Float] = []
+    var partialMatch: Float = 0
 }
 
 struct DetectionResult: Equatable {
